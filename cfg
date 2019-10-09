@@ -1,11 +1,11 @@
-sndv=11
-mscv=6
-name=Player
+sndv=0
+mscv=0
+name=TGA
 fscr=-
 vspd=25
 vmm=-
-sport=10666
-saddr=46.243.9.7:10666
-pnu=100
+saddr=46.151.157.125:10666
 lng=-
 mai=-
+vidmw=800
+vidmh=600

@@ -5,11 +5,11 @@ begin
    net_buf^.len:=0;
 end;
 
-
-
-function _initSocket:boolean;
+function net_UpSocket:boolean;
 begin
-   _initSocket:=false;
+   net_UpSocket:=false;
+
+   net_period:=0;
 
    net_buf:=SDLNet_AllocPacket(MaxNetBuffer);
    if (net_buf=nil) then
@@ -18,21 +18,40 @@ begin
       exit;
    end;
 
-   if(net_cl_con)then net_socket:=SDLNet_UDP_Open(0) else
-    if(net_sv_up)then net_socket:=SDLNet_UDP_Open(net_sv_port);
+   if(net_nstat=ns_clnt)
+   then net_socket:=SDLNet_UDP_Open(0)
+   else
+     if(net_nstat=ns_srvr)
+     then net_socket:=SDLNet_UDP_Open(net_sv_port);
+
    if (net_socket=nil) then
    begin
       WriteError;
       exit;
    end;
 
-   _initSocket:=true;
+   net_UpSocket:=true;
 end;
 
-function initNET:boolean;
+function InitNET:boolean;
 begin
-   initNET:=(SDLNet_Init=0);
-   if(initNet=false)then WriteError;
+   InitNET:=(SDLNet_Init=0);
+   if(InitNET=false)then WriteError;
+end;
+
+procedure net_dispose;
+begin
+   if(net_buf<>nil)then
+   begin
+      SDLNet_FreePacket(net_buf);
+      net_buf:=nil;
+   end;
+
+   if(net_socket<>nil)then
+   begin
+      SDLNet_UDP_Close(net_socket);
+      net_socket:=nil;
+   end;
 end;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +71,7 @@ begin
    net_buf^.len:=0;
 end;
 
-// READ
+// READ   //////////////////////////////////////////////////////////////////
 
 function net_readbyte:byte;
 begin
@@ -84,6 +103,15 @@ begin
    end
 end;
 
+function net_readword:word;
+begin
+   net_readword:=0;
+   if (net_buf^.len<MaxNetBuffer) then
+   begin
+      move((net_buf^.data+net_buf^.len)^, (@net_readword)^, 2);
+      inc(net_buf^.len,2);
+   end
+end;
 
 function net_readcard:cardinal;
 begin
@@ -140,6 +168,15 @@ begin
    end;
 end;
 
+procedure net_writeword(b:word);
+begin
+   if (net_buf^.len<MaxNetBuffer) then
+   begin
+      move( (@b)^, (net_buf^.data+net_buf^.len  )^,2 );
+      Inc(net_buf^.len,2);
+   end;
+end;
+
 procedure net_writecard(b:cardinal);
 begin
    if (net_buf^.len<(MaxNetBuffer-2)) then
@@ -166,31 +203,6 @@ end;
 
 ////////////////
 
-procedure _net_writeupgrs(p:byte);
-begin
-   with _players[p] do
-    net_writebyte(upgr[0] + (upgr[1] shl 1) + (upgr[2] shl 2) + (upgr[3] shl 3) + (upgr[4] shl 4) + (upgr[5] shl 5) + (upgr[6] shl 6) + (upgr[7] shl 7) );
-end;
-
-procedure _net_readupgrs(p:byte);
-var i:byte;
-begin
-   with _players[p] do
-   begin
-      i:=net_readbyte;
-      upgr[7]:=(i shr 7) and 1;
-      upgr[6]:=(i shr 6) and 1;
-      upgr[5]:=(i shr 5) and 1;
-      upgr[4]:=(i shr 4) and 1;
-      upgr[3]:=(i shr 3) and 1;
-      upgr[2]:=(i shr 2) and 1;
-      upgr[1]:=(i shr 1) and 1;
-      upgr[0]:=(i shr 0) and 1;
-   end;
-end;
-
-/////////
-
 function net_LastinIP:cardinal;
 begin
    net_LastinIP:=net_buf^.address.host;
@@ -203,28 +215,11 @@ end;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-procedure _lg_c_add(msg:string);
-var i:byte;
+procedure net_sv_sport;
 begin
-   Inc(net_lg_ci,1);
-   for i:=net_lg_cs-1 downto 0 do net_lg_c[i+1]:=net_lg_c[i];
-   net_lg_c[0]:=msg;
-   net_lg_lmt:=chat_lm_t;
-   vid_mredraw:=true;
-   if(ord(msg[1])<>PlayerHuman)then
-   begin
-      if(net_sv_up or net_cl_con)then chat_nrlm:=(_menu)and(_mmode<>mm_chat);
-      PlaySNDM(snd_chat);
-   end;
+   net_sv_port:=s2w(net_sv_pstr);
+   net_sv_pstr:=w2s(net_sv_port);
 end;
-
-procedure _lg_c_clear;
-var i:byte;
-begin
-   for i:=0 to net_lg_cs do net_lg_c[i]:='';
-   net_lg_ci:=0;
-end;
-
 
 function ip2c(s:string):cardinal;
 var i,l,r:byte;
@@ -232,10 +227,13 @@ var i,l,r:byte;
 begin
    r:=0;
    l:=length(s);
-   if (l>0) then
+   if(l>0)then
     for i:=1 to l do
-     if s[i]='.'
-     then begin inc(r,1); if (r>3) then break; end
+     if(s[i]='.')then
+     begin
+        inc(r,1);
+        if(r>3)then break;
+     end
      else e[r]:=s2b(b2s(e[r])+s[i]);
    ip2c:=cardinal((@e)^);
 end;
@@ -243,12 +241,6 @@ end;
 function c2ip(c:cardinal):string;
 begin
    c2ip:=b2s(c and $FF )+'.'+b2s((c and $FF00) shr 8)+'.'+b2s((c and $FF0000) shr 16)+'.'+b2s((c and $FF000000) shr 24);
-end;
-
-procedure net_sv_sport;
-begin
-   net_sv_port:=s2w(net_sv_pstr);
-   net_sv_pstr:=w2s(net_sv_port);
 end;
 
 procedure net_cl_saddr;
@@ -281,11 +273,85 @@ begin
    net_cl_svstr:=c2ip(net_cl_svip)+':'+w2s(swap(net_cl_svport));
 end;
 
-////////////////////////////////////////////////////////////////////////////////
 
-procedure net_cl_pause;
+
+procedure net_chat_add(msg:string);
+var i,len:byte;
+    c:char;
 begin
-   if(net_cl_con)then
+   repeat
+     Inc(net_chat_s,1);
+     for i:=MaxNetChat-1 downto 0 do net_chat[i+1]:=net_chat[i];
+
+     len:=length(msg);
+     if(len=0)then exit;
+     if(len>ChatLen)then len:=ChatLen;
+     c:=msg[1];
+     if(c in [#0..#4])then inc(len,1);
+
+     net_chat[0]:=copy(msg,1,len);
+     delete(msg,1,len);
+     if(length(msg)>0)then msg:=c+msg;
+   until length(msg)=0;
+
+   vid_mredraw:=true;
+   net_chat_shlm:=chat_shlm_t;
+   PlaySNDM(snd_chat);
+   _rpls_nwrch:=true;
+end;
+
+procedure net_chat_cl;
+begin
+   FillChar(net_chat,sizeof(net_chat),#0);
+end;
+
+function buff2byte(u:integer):byte;
+var i:integer;
+begin
+   buff2byte:=0;
+   with _units[u] do
+   begin
+      for i:=0 to 7 do
+       if(buff[i]>0)then buff2byte:=buff2byte or (1 shl i);
+   end;
+end;
+
+procedure byte2buff(u:integer;w:byte);
+var i:integer;
+begin
+   with _units[u] do
+    for i:=0 to 7 do
+     if(w and (1 shl i))>0
+     then buff[i]:=255
+     else buff[i]:=0;
+end;
+
+procedure net_writechat;
+var i:byte;
+begin
+   for i:=0 to MaxNetChat do net_writestring(net_chat[i]);
+end;
+
+procedure net_readchat;
+var i:byte;
+begin
+   for i:=0 to MaxNetChat do net_chat[i]:=net_readstring;
+end;
+
+procedure net_chatm;
+begin
+   if(net_nstat=ns_clnt)then
+   begin
+      net_clearbuffer;
+      net_writebyte(nmid_chat);
+      net_writestring(net_chat_str);
+      net_send(net_cl_svip,net_cl_svport);
+   end;
+end;
+
+procedure net_pause;
+begin
+   if(net_nstat=ns_clnt)then
    begin
       net_clearbuffer;
       net_writebyte(nmid_pause);
@@ -293,21 +359,19 @@ begin
    end;
 end;
 
-
-procedure net_chatm;
+procedure net_plout;
 begin
-   if(net_cl_con)then
+   if(net_nstat=ns_clnt)then
    begin
       net_clearbuffer;
-      net_writebyte(nmid_chat);
-      net_writestring(chat_m);
+      net_writebyte(nmid_plout);
       net_send(net_cl_svip,net_cl_svport);
    end;
 end;
 
 procedure net_swapp(p1:byte);
 begin
-   if(net_cl_con)then
+   if(net_nstat=ns_clnt)then
    begin
       net_clearbuffer;
       net_writebyte(nmid_swapp);
@@ -315,23 +379,6 @@ begin
       net_send(net_cl_svip,net_cl_svport);
    end;
 end;
-
-procedure _disposeNet;
-begin
-
-   if(net_buf<>nil)then
-   begin
-      SDLNet_FreePacket(net_buf);
-      net_buf:=nil;
-   end;
-
-   if(net_socket<>nil)then
-   begin
-      SDLNet_UDP_Close(net_socket);
-      net_socket:=nil;
-   end;
-end;
-
 
 
 

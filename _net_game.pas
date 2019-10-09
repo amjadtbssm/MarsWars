@@ -1,81 +1,103 @@
 
-
 function NewP(sip:cardinal;sp:word):byte;
 var i:byte;
 begin
    NewP:=0;
    for i:=1 to MaxPlayers do
-    if(i<>PlayerHuman)then
+    if(i<>HPlayer)then
      with _Players[i] do
-      if (state=PS_None) then
+      if(state=PS_None)then
       begin
-         nip  :=sip;
-         nport:=sp;
-         NewP :=i;
-         state:=PS_Play;
-         ttl  :=0;
+         nip   := sip;
+         nport := sp;
+         NewP  := i;
+         state := PS_Play;
+         ttl   := 0;
          break;
       end;
 end;
 
-function A2P(sip:cardinal;sp:word):byte;
+function A2P(sip:cardinal;sp:word;crtn:boolean):byte;
 var i:byte;
 begin
    A2P:=0;
    for i:=1 to MaxPlayers do
-    if(i<>PlayerHuman)then
+    if(i<>HPlayer)then
      with _Players[i] do
-      if (state=PS_Play)and(nip=sip)and(nport=sp) then
+      if(state=PS_Play)and(nip=sip)and(nport=sp)then
       begin A2P:=i; ttl:=0; break;end;
 
-   if (A2P=0)and(G_Started=false) then A2P:=NewP(sip,sp);
+   if(A2P=0)and(G_Started=false)and(crtn)then A2P:=NewP(sip,sp);
 end;
 
-procedure net_write_unit(u:integer;i,team:byte);
+procedure net_write_unit(u:integer;i,pteam:byte);
 begin
-   with _Units[u] do
+   with _units[u] do
    begin
       net_writeint(hits);
-      if(hits>0) then
+      if(hits>dead_hits)then
       begin
-         net_writebyte(ucl);
-         if(ucl=UID_FAPC)then net_writebyte(apcc);
-         if(ucl in whocaninapc)then
+         net_writebyte(uid);
+         net_writebyte(buff2byte(u));
+         if(hits>0)then
          begin
-            net_writeint(inapc);
+            if(uid in whocanattack)then net_writeint(tar1);
+            if(uid in whoapc)then net_writebyte(apcc);
+            if(uid in whocaninapc)then net_writeint(inapc);
             if(inapc>0)then exit;
-         end;
-         net_writeint (vx);
-         net_writeint (vy);
-         net_writeint (tar);
-         if(isbuild)then
-         begin
-            net_writebool(bld);
-            if(bld)and(radar)then
-             if(_players[player].team=team)then
-             begin
-                net_writeint(rld);
-                net_writeint(mx);
-                net_writeint(my);
-             end;
-         end;
-         if(player=i)then
-         begin
-            net_writebyte(order);
-            net_writebool(sel);
+            net_writeint(vx);
+            net_writeint(vy);
             if(isbuild)then
             begin
+               net_writebool(bld);
                if(bld)then
-                if(utp in [ut_1,ut_3])then
-                begin
-                   net_writeint(rld);
-                   net_writebyte(utrain);
-                end;
-               if(utp=ut_1)or(ucl=UID_HellTeleport)or(ucl=UID_HellBarracks)then
                begin
-                  net_writeint(mx);
-                  net_writeint(my);
+                  if(uid=UID_URadar)then
+                   if(_players[player].team=pteam)then
+                   begin
+                      net_writeint(rld);
+                      if(rld>=radar_time)then
+                      begin
+                         net_writeint(uo_x);
+                         net_writeint(uo_y);
+                      end;
+                   end;
+                  if(uid=UID_URocketL)then
+                  begin
+                     net_writeint(rld);
+                     if(rld>0)then
+                     begin
+                        net_writeint(uo_x);
+                        net_writeint(uo_y);
+                     end;
+                  end;
                end;
+            end;
+            if(player=i)then
+            begin
+               net_writebyte(order);
+               net_writebool(sel);
+               if(isbuild)then
+               begin
+                  if(bld)then
+                  begin
+                     if(uid in [UID_HGate,UID_HPools,UID_UMilitaryUnit,UID_HMilitaryUnit,UID_UWeaponFactory,UID_UVehicleFactory])then net_writeint(rld);
+                     if(uid in [UID_HGate,UID_HPools,UID_UMilitaryUnit,UID_HMilitaryUnit,UID_UWeaponFactory,UID_HMonastery])then net_writebyte(utrain);
+                  end;
+                  if(uid in whocanmp)then
+                  begin
+                     net_writeint(uo_x);
+                     net_writeint(uo_y);
+                  end;
+               end;
+            end;
+         end
+         else
+         begin
+            if(hits>-100)then
+            begin
+               net_writeint(vx);
+               net_writeint(vy);
             end;
          end;
       end;
@@ -84,23 +106,24 @@ end;
 
 
 
-
-procedure _netserver;
-var mid,pid,i,o:byte;
-        p:cardinal;
+procedure net_GServer;
+var mid,pid,i,n,o:byte;
+    gstp:cardinal;
 begin
    net_clearbuffer;
 
-   while (net_Receive>0) do
+   while(net_Receive>0)do
    begin
       mid:=net_readbyte;
 
-      if(mid=66)then
+      if(mid=nmid_getinfo)then
       begin
          net_clearbuffer;
-         net_writebyte(66);
+         net_writebyte(nmid_getinfo);
+         net_writebyte(ver);
          net_writebool(g_started);
-         net_writebyte(G_Mode);
+         net_writebool(g_addon);
+         net_writebyte(g_mode);
          for i:=1 to MaxPlayers do
           with _players[i] do
           begin
@@ -112,23 +135,7 @@ begin
          continue;
       end;
 
-      pid:=A2P(net_lastinip,net_lastinport);
-      if(pid=0) then
-      begin
-         net_clearbuffer;
-         if(g_started)
-         then net_writebyte(nmid_sgst)
-         else net_writebyte(nmid_sfull);
-         net_send(net_lastinip,net_lastinport);
-         continue;
-      end;
-
-      if(mid=nmid_chat)then   // chat
-      begin
-         _lg_c_add(chr(pid)+net_readstring);
-      end;
-
-      if (mid=nmid_connect) then // player info
+      if(mid=nmid_connect)then
       begin
          i:=net_readbyte;
          if(i<>ver)then
@@ -136,267 +143,281 @@ begin
             net_clearbuffer;
             net_writebyte(nmid_sver);
             net_send(net_lastinip,net_lastinport);
-            _Players[pid].state:=PS_none;
+            continue;
+         end;
+         pid:=A2P(net_lastinip,net_lastinport,true);
+         if(pid=0) then
+         begin
+            net_clearbuffer;
+            if(g_started)
+            then net_writebyte(nmid_sgst)
+            else net_writebyte(nmid_sfull);
+            net_send(net_lastinip,net_lastinport);
             continue;
          end;
 
-         if (G_Started=false) then
-         begin
-            with _Players[pid] do
-            begin
-               name :=net_readstring;
-               if(g_mode in [gm_2fort,gm_inv])
-               then net_readbyte
-               else team :=net_readbyte;
-               race :=net_readbyte;
-               ready:=net_readbool;
-               p:=net_readcard;
-               if(lg_c<=p)and(p<=net_lg_ci)then lg_c:=p;
-               nnu:=net_readbyte;
-               if(nnu<PNU_min)then nnu:=PNU_min;
-               nur:=net_readbyte;
-               if(nur<2)then nur:=2;
-               if(nur>4)then nur:=4;
-               vid_mredraw:=true;
-            end;
-
-            net_clearbuffer;
-            net_writebyte(nmid_players);
-            for i:=1 to MaxPlayers do
-             with _Players[i] do
-             begin
-                net_writestring(name);
-                net_writebyte(team);
-                net_writebyte(race);
-                net_writebyte(state);
-                net_writebool(ready);
-                net_writeint (ttl);
-             end;
-
-             net_writebyte(pid);
-             net_writebyte(PlayerHuman);
-
-             net_writeint (map_mw);
-             net_writebyte(map_pos);
-             net_writebool(map_liq);
-             net_writebyte(map_obs);
-             net_writecard(map_seed);
-             net_writebyte(g_mode);
-         end else
-         begin
-            net_clearbuffer;
-            net_writebyte(nmid_rshap);
-
-            for i:=1 to MaxPlayers do
-             with _Players[i] do
-             begin
-                net_writestring(name);
-                net_writebyte(team);
-                net_writebyte(race);
-                net_writebyte(state);
-             end;
-
-            net_writebyte(pid);
-            net_writebyte(PlayerHuman);
-
-            net_writeint (map_mw);
-            net_writebyte(map_pos);
-            net_writebool(map_liq);
-            net_writebyte(map_obs);
-            net_writecard(map_seed);
-            net_writebyte(g_mode);
-         end;
-
-         with _Players[pid] do net_send(nip,nport);
-      end;
-
-      if(g_Started=true)then
-      begin
-         if(mid=nmid_clord)then
-         begin
-            with _Players[pid]do
-            begin
-               o_x0:=net_readInt;
-               o_y0:=net_readInt;
-               o_x1:=net_readInt;
-               o_y1:=net_readInt;
-               o_id:=net_readbyte;
-            end;
-         end;
-
-         if (mid=nmid_rshap) then
+         if(G_Started=false)then
           with _Players[pid] do
           begin
-             nnu:=net_readbyte;
-             if(nnu<PNU_min)then nnu:=PNU_min;
-
-             nur:=net_readbyte;
-             if(nur<2)then nur:=2;
-             if(nur>4)then nur:=4;
-
-             p:=net_readcard;
-             if(lg_c<=p)and(p<=net_lg_ci)then lg_c:=p;
+             name :=net_readstring;
+             if(g_mode in [gm_2fort,gm_inv,gm_coop])
+             then i:=net_readbyte
+             else team :=net_readbyte;
+             race :=net_readbyte;
+             ready:=net_readbool;
+             nchs :=net_readbyte;
+             PNU  :=net_readbyte;
+             vid_mredraw:=true;
           end;
 
-         if (mid=nmid_pause)then
-         begin
-            if(G_Paused=pid)
-             then G_Paused:=0
-             else if(G_Paused<>PlayerHuman)then G_Paused:=pid;
-         end;
+         net_clearbuffer;
+         net_writebyte(nmid_startinf);
+         net_writebool(G_Started);
+         for i:=1 to MaxPlayers do
+          with _Players[i] do
+          begin
+             net_writestring(name);
+             net_writebyte  (team);
+             net_writebyte  (race);
+             net_writebyte  (state);
+             net_writebool  (ready);
+             net_writeint   (ttl);
+          end;
 
-      end else
+         net_writebyte(pid);
+         net_writebyte(HPlayer);
+
+         net_writeint (map_mw);
+         net_writebyte(map_liq);
+         net_writebyte(map_obs);
+         net_writeword(map_seed);
+         net_writebool(g_addon);
+         net_writebyte(g_mode);
+         net_writebyte(g_loss);
+         net_writebyte(g_starta);
+         net_writebool(g_onebase);
+
+         net_send(net_lastinip,net_lastinport);
+      end
+      else   // other net mess
       begin
-         if (mid=nmid_swapp) then
+         pid:=A2P(net_lastinip,net_lastinport,false);
+         if(pid>0)then
          begin
-            i:=net_readbyte;
-            _swapPlayers(i,pid);
-         end;
+            if(mid=nmid_chat)then
+            begin
+               net_chat_add(chr(pid)+net_readstring);    // chat
+               if(_ded)and(G_Started=false)then _parseCmd(net_chat[0],pid);
+            end;
 
-         if (mid=nmid_rshap) then
+            if(mid=nmid_plout)then
+            begin
+               net_chat_add(_players[pid].name+str_plout);
+               //_kill_player(pid);
+               if(G_Started=false)then _players[pid].state:=ps_none;
+               exit;
+            end;
+
+            if(G_Started)then
+            begin
+               if(mid=nmid_order)then
+                with _players[pid]do
+                begin
+                   o_x0:=net_readint;
+                   o_y0:=net_readint;
+                   o_x1:=net_readint;
+                   o_y1:=net_readint;
+                   o_id:=net_readbyte;
+                end;
+
+               if(mid=nmid_clinf) then
+                with _players[pid] do
+                begin
+                   PNU :=net_readbyte;
+                   nchs:=net_readbyte;
+                end;
+
+               if(mid=nmid_pause)then
+               begin
+                  if(G_Paused=pid)
+                  then G_Paused:=0
+                  else
+                    if(G_Paused<>HPlayer)or(G_Paused=0)then G_Paused:=pid;
+                  if(_ded)then vid_mredraw:=true;
+               end;
+            end
+            else
+            begin
+               if(mid=nmid_swapp)then
+               begin
+                  i:=net_readbyte;
+                  _swapPlayers(i,pid);
+               end;
+            end;
+         end
+         else
          begin
             net_clearbuffer;
-            net_writebyte(nmid_nbegin);
+            net_writebyte(nmid_ncon);
             net_send(net_lastinip,net_lastinport);
          end;
       end;
    end;
 
-
    for i:=1 to MaxPlayers do
-    if(i<>PlayerHuman)then
-     with _Players[i] do
-      if (state=PS_Play)and(ttl<ClientTTL) then
+    if(i<>HPlayer)then
+     with _players[i] do
+      if(state=PS_Play)and(ttl<ClientTTL)then
       begin
-         if(G_Started)and((prdc_units mod nur)=0)then
+         if(G_Started)and((net_period mod NetTickN)=0)then
          begin
             net_clearbuffer;
             net_writebyte(nmid_shap);
-
             net_writebyte(G_Paused);
             if(G_Paused=0)then
             begin
-               net_writebyte(nur);
                net_writecard(G_Step);
-               if(G_step mod 15)=0 then
-               begin
-                  for o:=1 to MaxPlayers do  _net_writeupgrs(o);  /////////////
 
+               gstp:=G_Step shr 1;
+               if((gstp mod vid_hhfps)=0)then
+               begin
                   net_writebyte(bld_r);
                   net_writebyte(menerg);
                   net_writebyte(cenerg);
                   net_writebyte(wb);
-                  net_writebool(hcmp);
-                  net_writeint(u0);
-                  net_writeint(u1);
-                  net_writeint(u3);
-                  net_writeint(u5);
-                  net_writeint(hptm);
+                  net_writebool(wbhero);
+                  net_writebyte(bldrs);
+               end;
+               if((gstp mod vid_hfps)=0)then
+               begin
+                  net_writeint(ubx[1]);
+                  net_writeint(ubx[3]);
+                  net_writeint(ubx[5]);
+                  net_writeint(ubx[6]);
+                  net_writeint(ubx[8]);
 
                   if(g_mode=gm_inv)then
                   begin
-                     net_writebyte(g_inv_w);
+                     net_writebyte(g_inv_wn);
                      net_writeint(g_inv_t);
                   end;
                   if(g_mode=gm_ct)then
                    for o:=1 to MaxPlayers do
-                    net_writebyte(g_pt[o].p);
+                    net_writebyte(g_ct_pl[o].pl);
+
+                  for o:=0 to MaxPlayers do
+                   for n:=0 to _uts do net_writebyte(_players[o].upgr[n]);
                end;
 
-               if(n_u<101)then n_u:=101;
+               if(n_u<1)then n_u:=1;
 
-               net_writebyte(nnu);
+               net_writebyte(PNU);
                net_writeint(n_u);
-               for o:=1 to nnu do
+               for o:=1 to PNU do
                begin
                   inc(n_u,1);
-                  if(n_u>MaxUnits) then n_u:=101;
+                  if(n_u>MaxUnits) then n_u:=1;
 
                   net_write_unit(n_u,i,team);
-
-                  if(n_u=101)then
-                   if(g_mode=gm_inv)then
-                    for mid:=1 to inv_mon do net_write_unit(mid,i,team);
                end;
-            end;
+            end
+            else net_writebyte(G_WTeam);
             net_send(nip,nport);
          end;
 
-         if(prdc_units=0)then
-          if(lg_c<net_lg_ci)then
-          begin
-             net_clearbuffer;
-             net_writebyte(nmid_chat);
-
-             if(net_lg_ci>lg_c)
-             then p:=net_lg_ci-lg_c
-             else p:=0;
-
-             if(p>net_lg_cs)then p:=net_lg_cs;
-
-             if(p>0)then
-             begin
-                net_writecard(net_lg_ci);
-                net_writebyte(p);
-
-                for o:=1 to p do net_writestring(net_lg_c [p-o]);
-                net_send(nip,nport);
-             end;
-          end;
+         if(net_period=i)and(nchs<>net_chat_s)then
+         begin
+            net_clearbuffer;
+            net_writebyte(nmid_chatclupd);
+            net_writebyte(net_chat_s);
+            net_writechat;
+            net_send(nip,nport);
+         end;
       end;
+
+   inc(net_period,1);
+   net_period:=net_period mod vid_hfps;
 end;
 
 procedure net_readunit(u:integer);
 begin
-   _Units[0]:=_Units[u];
-   with _Units[u] do
+   _units[0]:=_units[u];
+   with _units[u] do
    begin
+      player:=(u-1) div MaxPlayerUnits;
       hits:=net_readint;
-      if(hits>0)then
+      if(hits>dead_hits)then
       begin
-         player:=(u-1)div MaxPlayerUnits;
-         ucl   :=net_readbyte; _unit_sclass(u);
-         if(ucl=UID_FAPC)then apcc:=net_readbyte;
-         if(ucl in whocaninapc)then
+         uid:=net_readbyte;
+         _unit_sclass(@_units[u]);
+         byte2buff(u,net_readbyte);
+         if(hits>0)then
          begin
-            inapc:=net_readint;
-            if(inapc>0)then
+            if(uid in whocanattack)then tar1:=net_readint;
+            if(uid in whoapc)then apcc:=net_readbyte;
+            if(uid in whocaninapc)then
             begin
-               _netSetUcl(u);
-               exit;
+               inapc:=net_readint;
+               if(inapc>0)then
+               begin
+                  _netSetUcl(u);
+                  exit;
+               end;
             end;
-         end;
-         x     :=net_readint;
-         y     :=net_readint;
-         tar   :=net_readint;
-         if(isbuild)then
-         begin
-            bld:=net_readbool;
-            if(bld)and(radar)then
-             if(_players[player].team=_players[PlayerHuman].team)then
-             begin
-                rld:=net_readint;
-                mx:=net_readint;
-                my:=net_readint;
-             end;
-         end;
-         if(player=PlayerHuman)then
-         begin
-            order:=net_readbyte;
-            sel  :=net_readbool;
+            x:=net_readint;
+            y:=net_readint;
             if(isbuild)then
             begin
+               bld:=net_readbool;
                if(bld)then
-                if(utp in [ut_1,ut_3])then
-                begin
-                   rld:=net_readint;
-                   utrain:=net_readbyte;
-                end;
-               if(utp=ut_1)or(ucl=UID_HellTeleport)or(ucl=UID_HellBarracks)then
                begin
-                  mx:=net_readint;
-                  my:=net_readint;
+                  if(uid=UID_URadar)then
+                   if(_players[player].team=_players[HPLayer].team)then
+                   begin
+                      rld:=net_readint;
+                      if(rld>=radar_time)then
+                      begin
+                         uo_x:=net_readint;
+                         uo_y:=net_readint;
+                      end;
+                   end;
+                  if(uid=UID_URocketL)then
+                  begin
+                     bld_s:=net_readint;
+                     if(rld=0)then rld:=bld_s;
+                     if(bld_s>0)then
+                     begin
+                        uo_x:=net_readint;
+                        uo_y:=net_readint;
+                     end;
+                  end;
                end;
+            end;
+            if(player=HPlayer)then
+            begin
+               order:=net_readbyte;
+               sel  :=net_readbool;
+               if(isbuild)then
+               begin
+                  if(bld)then
+                  begin
+                     if(uid in [UID_HGate,UID_HPools,UID_UMilitaryUnit,UID_HMilitaryUnit,UID_UWeaponFactory,UID_UVehicleFactory])then rld:=net_readint;
+                     if(uid in [UID_HGate,UID_HPools,UID_UMilitaryUnit,UID_HMilitaryUnit,UID_UWeaponFactory,UID_HMonastery])then utrain:=net_readbyte;
+                  end;
+                  if(uid in whocanmp)then
+                  begin
+                     uo_x:=net_readint;
+                     uo_y:=net_readint;
+                  end;
+               end;
+            end;
+         end
+         else
+         begin
+            if(hits>-100)then
+            begin
+               net_writeint(vx);
+               net_writeint(vy);
             end;
          end;
       end;
@@ -404,173 +425,173 @@ begin
    _netSetUcl(u);
 end;
 
-procedure _netClient;
-var mid,i,l:byte;
-        t:cardinal;
+procedure net_GClient;
+var mid,i,n:byte;
+    gst:boolean;
+    gstp:cardinal;
 begin
    net_clearbuffer;
-   while (net_Receive>0) do
+   while(net_Receive>0)do
+   if(net_lastinip=net_cl_svip)and(net_lastinport=net_cl_svport)then
    begin
+      net_cl_svttl:=0;
       mid:=net_readbyte;
 
-      if (mid=nmid_sfull) then
+      if(mid=nmid_sfull) then
       begin
          net_m_error:=str_sfull;
          vid_mredraw:=true;
       end;
 
-      if (mid=nmid_sver) then
+      if(mid=nmid_sver) then
       begin
          net_m_error:=str_sver;
          vid_mredraw:=true;
       end;
 
-      if (mid=nmid_sgst) then
+      if(mid=nmid_sgst) then
       begin
          net_m_error:=str_sgst;
          vid_mredraw:=true;
       end;
 
-      if (mid=nmid_players) then // players and other info
+      if(mid=nmid_ncon)then
       begin
+         G_Started:=false;
+         _menu:=true;
+         PlayerReady:=false;
+         DefGameObjects;
+      end;
+
+      if(mid=nmid_chatclupd)then
+      begin
+         i:=net_readbyte;
+         if(net_chat_s<>i)then
+         begin
+            PlaySNDM(snd_chat);
+            _rpls_nwrch:=true;
+         end;
+         net_chat_s:=i;
+         net_readchat;
+         net_chat_shlm:=chat_shlm_t;
+      end;
+
+      if(mid=nmid_startinf)then
+      begin
+         gst:=net_readbool;
+
          for i:=1 to MaxPlayers do
           with _Players[i] do
           begin
-             name :=net_readstring;
-             team :=net_readbyte;
-             race :=net_readbyte;
-             state:=net_readbyte;
-             ready:=net_readbool;
-             ttl  :=net_readint;
+             name := net_readstring;
+             team := net_readbyte;
+             race := net_readbyte;
+             state:= net_readbyte;
+             ready:= net_readbool;
+             ttl  := net_readint;
           end;
 
-         PlayerHuman:=net_readbyte;
+         HPlayer:=net_readbyte;
          net_cl_svpl:=net_readbyte;
 
-         map_mw  :=net_readint;
-         map_pos :=net_readbyte;
-         map_liq :=net_readbool;
-         map_obs :=net_readbyte;
-         map_seed:=net_readcard;
-         g_mode  :=net_readbyte;
-         g_premap;
+         map_mw   := net_readint;
+         map_liq  := net_readbyte;
+         map_obs  := net_readbyte;
+         map_seed := net_readword;
+         g_addon  := net_readbool;
+         g_mode   := net_readbyte;
+         g_loss   := net_readbyte;
+         g_starta := net_readbyte;
+         g_onebase:= net_readbool;
 
-         vid_mredraw:=true;
-         net_cl_svttl:=0;
+         Map_premap;
          net_m_error:='';
-      end;
 
-      if(mid=nmid_chat)then // chat
-      begin
-         t:=net_readcard;
-         if(t>net_lg_ci)then
+         if(gst<>G_Started)then
          begin
-            i:=net_readbyte;
-            for l:=1 to i do _lg_c_add(net_readstring);
-            net_lg_ci:=t;
-            net_cl_svttl:=0;
+            G_Started:=gst;
+            if(G_Started)then
+            begin
+               _menu:=false;
+               onlySVCode:=false;
+               if(g_mode=gm_coop)then _make_coop;
+               _moveHumView(map_psx[HPlayer] , map_psy[HPlayer]);
+            end
+            else
+            begin
+               _menu:=true;
+               PlayerReady:=false;
+               DefGameObjects;
+            end;
          end;
       end;
 
-      if (mid=nmid_shap) then // units
-      with _Players[PlayerHuman] do
+      if(G_Started)then
       begin
-         net_cl_svttl:=0;
-
-         G_paused:=net_readbyte;
-
-         if(G_paused=0)then
+         if(mid=nmid_shap)then
+         with _players[HPlayer] do
          begin
-            nur:=net_readbyte;
-            G_Step  :=net_readcard;
+            G_paused:=net_readbyte;
 
-            if(G_step mod 15)=0 then
+            if(G_paused=0)then
             begin
-               for l:=1 to MaxPlayers do _net_readupgrs(l);
+               G_Step  :=net_readcard;
 
-               bld_r:=net_readbyte;
-               menerg:=net_readbyte;
-               cenerg:=net_readbyte;
-               wb:=net_readbyte;
-               hcmp:=net_readbool;
-               u0:=net_readint;
-               u1:=net_readint;
-               u3:=net_readint;
-               u5:=net_readint;
-               n_u:=net_readint;
-               if(hptm=0)and(n_u>0)then PlaySNDM(snd_hell);
-               hptm:=n_u;
-               if(g_mode=gm_inv)then
+               gstp:=G_Step shr 1;
+               if((gstp mod vid_hhfps)=0)then
                begin
-                  g_inv_w:=net_readbyte;
-                  g_inv_t:=net_readint;
+                  bld_r  := net_readbyte;
+                  menerg := net_readbyte;
+                  cenerg := net_readbyte;
+                  wb     := net_readbyte;
+                  wbhero := net_readbool;
+                  bldrs  := net_readbyte;
                end;
-               if(g_mode=gm_ct)then
-                for l:=1 to MaxPlayers do
-                 g_pt[l].p:=net_readbyte;
-            end;
+               if((gstp mod vid_hfps)=0)then
+               begin
+                  ubx[1] := net_readint;
+                  ubx[3] := net_readint;
+                  ubx[5] := net_readint;
+                  ubx[6] := net_readint;
+                  ubx[8] := net_readint;
 
-            n_u:=net_readbyte;
-            if(n_u<>nnu)then
-            begin
-               nnu:=n_u;
-               if(nnu=0)then nnu:=1;
-               UnitStepNumNet:=trunc(CLUnits/nnu)*nur;
-            end;
+                  if(g_mode=gm_inv)then
+                  begin
+                     g_inv_wn:=net_readbyte;
+                     g_inv_t :=net_readint;
+                  end;
+                  if(g_mode=gm_ct)then
+                   for i:=1 to MaxPlayers do
+                    g_ct_pl[i].pl:=net_readbyte;
 
-            n_u:=net_readint;
-            for i:=1 to nnu do
-            begin
-               inc(n_u,1);
-               if(n_u>MaxUnits) then n_u:=101;
+                  for i:=0 to MaxPlayers do
+                   for n:=0 to _uts do _players[i].upgr[n]:=net_readbyte;
+               end;
 
-               net_readunit(n_u);
+               n_u:=net_readbyte;
+               if(n_u<>PNU)then
+               begin
+                  PNU:=n_u;
+                  if(PNU=0)then PNU:=NetTickN;
+                  UnitStepNum:=trunc(MaxUnits/PNU)*NetTickN;
+                  if(UnitStepNum=0)then UnitStepNum:=1;
+               end;
 
-               if(n_u=101)then
-                if(g_mode=gm_inv)then
-                 for l:=1 to inv_mon do net_readunit(l);
-            end;
+               n_u:=net_readint;
+               for i:=1 to PNU do
+               begin
+                  inc(n_u,1);
+                  if(n_u>MaxUnits) then n_u:=1;
+
+                  net_readunit(n_u);
+               end;
+            end
+            else G_WTeam:=net_readbyte;
          end;
-      end;
-
-      if(mid=nmid_rshap) then
-      begin
-         for l:=1 to MaxPlayers do
-          with _Players[l] do
-          begin
-             name :=net_readstring;
-             team :=net_readbyte;
-             race :=net_readbyte;
-             state:=net_readbyte;
-          end;
-         PlayerHuman:=net_readbyte;
-         net_cl_svpl:=net_readbyte;
-
-         map_mw  :=net_readint;
-         map_pos :=net_readbyte;
-         map_liq :=net_readbool;
-         map_obs :=net_readbyte;
-         map_seed:=net_readcard;
-         g_mode  :=net_readbyte;
-         g_premap;
-
-         G_Started:=true;
-         _menu:=false;
-         net_cl_svttl:=0;
-         onlySVCode:=false;
-      end;
-
-      if(mid=nmid_nbegin)and(G_Started=true)then
-      begin
-         net_cl_svttl:=0;
-         G_Started:=false;
-         _menu:=true;
-         DefGameObjects;
       end;
    end;
 
-
-   if (prdc_units=0) then
+   if(net_period=0)then
    begin
       net_clearbuffer;
       if (G_Started=false) then
@@ -581,20 +602,26 @@ begin
          net_writebyte  (PlayerTeam);
          net_writebyte  (PlayerRace);
          net_writebool  (PlayerReady);
-         net_writecard  (net_lg_ci);
-         net_writebyte  (PlayerNUnits);
-         net_writebyte  (PlayerNUR);
-      end else
+         net_writebyte  (net_chat_s);
+         net_writebyte  (_net_pnua[net_pnui]);
+      end
+      else
       begin
-         net_writebyte(nmid_rshap);
-         net_writebyte(PlayerNUnits);
-         net_writebyte(PlayerNUR);
-         net_writecard(net_lg_ci);
+         net_writebyte(nmid_clinf);
+         net_writebyte(_net_pnua[net_pnui]);
+         net_writebyte(net_chat_s);
       end;
       net_send(net_cl_svip,net_cl_svport);
    end;
 
-   if(net_cl_svttl<ClientTTL)then inc(net_cl_svttl,1);
+   inc(net_period,1);net_period:=net_period mod vid_hfps;
+   if(net_cl_svttl<ClientTTL)then
+   begin
+      inc(net_cl_svttl,1);
+      if(net_cl_svttl=vid_fps)then vid_mredraw:=true;
+      if(net_cl_svttl=ClientTTL)then G_Paused:=net_cl_svpl;
+   end;
 end;
+
 
 

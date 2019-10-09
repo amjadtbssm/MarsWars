@@ -9,14 +9,137 @@ TSoc = set of char;
 TSob = set of byte;
 
 TUSprite = record
-     surf:pSDL_Surface;
-     hw,hh:integer;
+   surf:pSDL_Surface;
+   hw,hh:integer;
 end;
 PTUSprite = ^TUSprite;
 
 TADec = record
    x,y:integer;
-   spr:PTUsprite;
+end;
+
+TDoodad = record
+   x,y,dpth,r,t,a,mmx,mmy,mmr,fx,fy:integer;
+   mmc:cardinal;
+end;
+PTDoodad = ^TDoodad;
+
+TUnit = record
+   mmx,mmy,mmr,
+   fx,fy,fr,
+   vx,vy,
+   x,y,
+   anim,r,sr,anims,
+   speed,dir,rld,trt,
+   mhits,rld_a,rld_r,
+   bld_s,
+   hits    : integer;
+
+   foot,mdmg,
+   generg,uf,
+   _uclord,
+   vstp,order,
+   player,utrain,
+   uid,max,shadow,
+   ucl     : byte;
+
+   alrm_i  : boolean;
+   alrm_b  : boolean;
+   alrm_x,
+   alrm_y,
+   alrm_r,
+   tar1,
+   dtar,
+   uo_tar,
+   uo_x,
+   uo_y    : integer;
+   uo_id   : byte;
+
+   inapc   : integer;
+   painc,
+   pains,
+   apcc,
+   apcm,
+   apcs    : byte;
+
+   ai_basex,
+   ai_basey: integer;
+
+   buff : array[0.._ubuffs] of byte;
+
+   isbuild,
+   mech,bld,solid,
+   wanim,melee,
+   sel     : boolean;
+end;
+PTUnit = ^TUnit;
+
+upgrar = array[0.._uts] of byte;
+Pupgrar = ^upgrar;
+
+TPlayer = record
+   name    : string;
+
+   cenerg,
+   menerg,
+   army,team,
+   race,state,
+   bld_r
+           : byte;
+   wbhero,
+   ready   : boolean;
+
+   o_id    : byte;
+o_x0,o_y0,
+o_x1,o_y1  :integer;
+
+   u_e     : array[false..true,0.._uts] of byte;
+   u_s     : array[false..true,0.._uts] of byte;
+   u_c     : array[false..true] of byte;
+   ubx     : array[0.._uts] of integer;
+
+   ai_pushpart,
+   ai_maxarmy,
+   ai_attack,
+   ai_skill: byte;
+
+   cpupgr,
+   a_upgr,
+   a_build,
+   a_units : cardinal;
+
+   upgr    : upgrar;
+
+   nchs,wb,bldrs,
+   PNU     : byte;
+   effect,
+   n_u,
+   ttl     : integer;
+   nip     : cardinal;
+   nport   : word;
+end;
+
+TPList = array[0..MaxPlayers] of TPLayer;
+
+string6 = string[6];
+
+TVisSpr = record
+   s     : PSDL_Surface;
+   x,y,ro,
+   d,sh  : integer;
+   rc,msk: cardinal;
+   inv   : byte;
+   bar   : single;
+   clu   : integer;
+   cll,
+   crl   : byte;
+   cru   : string6;
+   rct   : boolean;
+end;
+
+TMissile = record
+   x,y,vx,vy,dam,vst,tar,sr,fx,fy,dir,mtars:integer;
+   player,mid,mf:byte;
 end;
 
 TEff = record
@@ -24,94 +147,16 @@ TEff = record
    e:byte;
 end;
 
-TMissile = record
-   x,y,vx,vy,dam,vst,tar,sr,fx,fy,dir:integer;
-   player,mid,mf:byte;
+TCTPoint = record
+   px,py,mpx,mpy,ct:integer;
+   pl:integer;
 end;
 
-
-TDoodad = record
-   x,y,dpth,r,t,a,mmx,mmy,mmr,fx,fy:integer;
-   mmc:cardinal;
+TAlarm = record
+   x,y,t:integer;
+   b:boolean;
 end;
 
-PTDoodad = ^TDoodad;
-
-TUnit = record
-   x,y,vx,vy,mx,my,mmx,mmy,fx,fy,fr,sr,
-   mhits,hits,dir,r,speed,rld,vst,tar,dtar,vist,order,anim,shield:integer;
-
-   apcc,apcm,apcs,
-   alt,
-   _uclord,uf,utp,generg,
-   invis,detect,
-   ucl,vis,mmr,utrain,
-   paint,pains,painc,
-   player,foots,ma:byte;
-
-   bio,
-   sel,bld,isbuild,dsbl,solid,
-   melee,radar,teleport,
-   wanim,shadow,canw,invuln:boolean;
-
-   inapc,
-   alx,aly,ald:integer;
-
-   spr:PTUSprite;
-end;
-
-PTUnit = ^TUnit;
-
-TPlayer = record
-   name:string;
-   ready:boolean;
-   team,state,
-   race,army,
-   cenerg,menerg,_lsuc,
-   o_id,nnu,wb,bld_r:byte;
-
-   o_x0,o_y0,
-   o_x1,o_y1,ttl,n_u,u0,u1,u3,u5,hptm:integer;
-
-   alw_b,
-   alw_u,
-   alw_up:set of byte;
-
-   eu:array[false..true,0.._uts] of byte;
-   su:array[false..true,0.._uts] of byte;
-
-   upgr:array[0.._uts] of byte;
-
-   ai_defense:boolean;
-   ai_skill,
-   ai_minpush,
-   ai_maxarmy,
-   ai_partpush:byte;
-
-   hcmp:boolean;
-
-   nur:byte;
-   nip,lg_c:cardinal;
-   nport:word;
-end;
-
-
-TSprD = record
-   d,x,y,sh:integer;
-   s :psdl_Surface;
-   c,ac :cardinal;
-   o :single;
-   h :char;
-   i :byte;
-   r :boolean;
-   apcm,
-   apcc:byte;
-end;
-
-TPoint = record
-   x,y,cptt:integer;
-   mx,my,p:byte;
-end;
 
 
 

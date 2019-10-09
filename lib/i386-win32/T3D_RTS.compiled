@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="C:\lazarus\fpc\3.0.2\bin\i386-win32\fpc.exe" Date="1247517510"/>
+  <Params Value=" -Mfpc -O1 -g -gl -gv -Xg -gt -Xs -l -vewnhibq -FiS:\t3ds\MarsWars\NMarsWars_12.06\lib\i386-win32 -FuS:\t3ds\MarsWars\NMarsWars_12.06\ -FUS:\t3ds\MarsWars\NMarsWars_12.06\lib\i386-win32\ -oMarsWars.exe T3D_RTS.lpr"/>
+</CONFIG>

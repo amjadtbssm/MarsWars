@@ -1,75 +1,161 @@
-procedure _draw_surf(tar:pSDL_Surface;x,y:integer;sur:PSDL_SURFACE);
-begin
-   _rect^.x:=x;
-   _rect^.y:=y;
-   _rect^.w:=sur^.w;
-   _rect^.h:=sur^.h;
-   SDL_BLITSURFACE(sur,nil,tar,_rect);
-end;
+{
+x,y,depth,shadow z, rectangle color, amask color, spr, alpha, bar cx,
+}
 
-procedure _draw_text(sur:pSDL_Surface;x,y:integer;s:string;al,chrs:byte;tc:cardinal);
-var ss,i,o:byte;
-      sl:integer;
-       c:char;
+procedure _sl_add(ax,ay,ad,ash:integer;arc,amsk:cardinal;arct:boolean;aspr:pSDL_surface;ainv:byte;abar:single;aclu:integer;acrl,acll:byte;acru:string6;aro:integer);
 begin
-   ss:=length(s);
-   if(ss>0)then
+   if(vid_vsls<vid_mvs)and(G_Paused=0)and(_menu=false)then
    begin
-      if(chrs>ss)then chrs:=ss;
-      sl:=chrs*font_w;
-      case al of
-   ta_middle : dec(x,(sl div 2));
-   ta_right  : dec(x,sl+font_w);
-      end;
-      sl:=0;
-      o :=0;
-      for i:=1 to ss do
+      inc(vid_vsls,1);
+      with vid_vsl[vid_vsls] do
       begin
-         c:=s[i];
-         if(c>#13)then
-         begin
-            boxColor(sur,x,y,x+font_iw,y+font_iw,tc);
-            _draw_surf(sur,x,y,font_ca[c]);
-         end;
-         inc(x ,font_w);
-         inc(sl,font_w);
-         inc(o,1);
-         if(o>=chrs)or(c=#13)or(c=#12)then //and not(s[i+1] in [#12..#13])
-         begin
-            o:=0;
-            dec(x,sl);
-            inc(y,font_w);
-            if(c=#12)
-            then inc(y,txt_line_h2)
-            else inc(y,txt_line_h);
-            sl:=0;
-         end;
+         x   := ax-vid_vx;
+         y   := ay-vid_vy;
+         d   := ad;
+         sh  := ash;
+         s   := aspr;
+         rc  := arc;
+         msk := amsk;
+         inv := ainv;
+         bar := abar;
+         clu := aclu;
+         cru := acru;
+         crl := acrl;
+         cll := acll;
+         rct := arct;
+         ro  := aro;
       end;
    end;
 end;
 
-procedure _draw_ctext(sur:pSDL_Surface;x,y:integer;s:string);
-var p:byte;
+procedure _sv_sort;
+var i,u:word;
+    dt:TVisSpr;
 begin
-   if(length(s)>0)then
+   if(vid_vsls>1)then
+    for i:=1 to vid_vsls do
+     for u:=1 to (vid_vsls-1) do
+      if (vid_vsl[u].d<vid_vsl[u+1].d) then
+      begin
+        dt:=vid_vsl[u];
+        vid_vsl[u]:=vid_vsl[u+1];
+        vid_vsl[u+1]:=dt;
+      end;
+end;
+
+procedure D_SpriteList;
+var sx,sy:integer;
+begin
+   _sv_sort;
+   if(G_Paused>0)
+   then vid_vsls:=vid_vslsp
+   else vid_vslsp:=vid_vsls;
+   while(vid_vsls>0)do
+    with vid_vsl[vid_vsls] do
+    begin
+       if(sh>0)then
+       begin
+          sx:=(s^.w shr 1);
+          sy:=s^.h-(s^.h shr 3);
+          filledellipseColor(_screen,x+sx,y+sy+sh,sx,s^.h shr 2,c_ablack);
+       end;
+       SDL_SetAlpha(s,SDL_SRCALPHA or SDL_RLEACCEL,inv);
+
+       if(inv>0)then _draw_surf(_screen,x,y,s);
+
+       if(msk>0)or(ro>0)then
+       begin
+          sx:=s^.w shr 1;
+          sy:=s^.h shr 1;
+          if(msk>0)then filledellipseColor(_screen,x+sx,y+sy,sx,sy,msk);
+          if(ro >0)then circleColor(_screen,x+sx,y+sy,ro,c_gray);
+       end;
+
+       sy:=y;
+       sx:=s^.h;
+       if(y<4)then
+       begin
+          sx:=s^.h+y-4;
+          y:=4;
+       end;
+
+       if(sy>-s^.h)then
+       begin
+          if(rc>0)and(y>-s^.h)then
+          begin
+             if(rct)then rectangleColor(_screen,x,y-1,x+s^.w,y+sx, rc);
+             if(bar>0)then
+             begin
+                boxColor(_screen,x,y-4,x+s^.w           ,y-1,c_black);
+                boxColor(_screen,x,y-4,x+trunc(bar*s^.w),y-1,rc);
+             end;
+          end;
+
+          if(clu >0 )then _draw_text(_screen,x     ,y          ,i2s(clu),ta_left ,255,c_white);
+          if(cru<>'')then _draw_text(_screen,x+s^.w,y          ,cru     ,ta_right,3,c_white);
+          if(cll >0 )then _draw_text(_screen,x     ,y+sx-font_w,b2s(cll),ta_left ,255,c_white);
+          if(crl >0 )then _draw_text(_screen,x+s^.w,y+sx-font_w,b2s(crl),ta_right,255,c_white);
+       end;
+
+       y:=sy;
+
+       SDL_SetAlpha(s,SDL_SRCALPHA or SDL_RLEACCEL,255);
+
+       dec(vid_vsls,1);
+    end;
+
+   if(ui_mc_a>0)then
    begin
-      p:=ord(s[1]);
-      if(p<=MaxPlayers)then _draw_text(sur,x-font_w,y,s,ta_left,255,p_colors[p]);
+      sx:=ui_mc_a;
+      sy:=sx shr 1;
+      ellipseColor(_screen,ui_mc_x-vid_vx,ui_mc_y-vid_vy,sx,sy,ui_mc_c);
+
+      if(G_Paused=0)then dec(ui_mc_a,1);
    end;
 end;
 
-procedure LoadingScreen;
+procedure D_terrain;
+var i,ix,iy,s:integer;
+    vx,vy:integer;
+    spr:PTUsprite;
 begin
-   SDL_FillRect(vid_screen,nil,0);
-   stringColor(vid_screen,(vid_mw div 2)-40, vid_mh div 2,@str_loading[1],c_yellow);
-   SDL_FLIP(vid_screen);
+   _draw_surf(_screen,vid_panel-((vid_vx+vid_panel) mod ter_w),-vid_vy mod ter_h, vid_terrain);
+
+   vx:=vid_vx;
+   vy:=vid_vy-vid_ab;
+
+   for i:=1 to MaxSDecsS do
+    with _SDecs[i-1] do
+    begin
+       ix:=x-vx+vid_mwa;
+       iy:=y-vy+vid_mha;
+
+       s:=i+abs(iy div vid_mha)+abs(ix div vid_mwa);
+
+       case map_trt of
+         0,17 : s:=s mod 19;
+       else
+         s:=s mod 14;
+       end;
+
+       if(s=0)
+       then spr:=@spr_crater
+       else spr:=@spr_tdecs[s];
+
+       ix:=ix mod vid_mwa;
+       iy:=iy mod vid_mha;
+
+       if(ix<0)then ix:=vid_mwa+ix;
+       if(iy<0)then iy:=vid_mha+iy;
+
+       dec(iy,vid_ab);
+
+       _draw_surf(_screen,ix-spr^.hw,iy-spr^.hh,spr^.surf);
+    end;
 end;
 
-{$Include _draw_menu.pas}
-{$Include _draw_panel.pas}
-
-procedure _draw_fog;
-var cx,cy,sx,sy,i:byte;
+procedure D_fog;
+var cx,cy,sx,sy,i,
     rx,ry,sry:integer;
 begin
    cx:=(vid_vx+vid_panel) div fog_cw;
@@ -82,8 +168,8 @@ begin
       for sy:=0 to fog_vcnh do
       begin
          i:=fog_c[cx+sx,cy+sy];
-         if(i=0)then filledcircleColor(vid_screen,rx,ry,fog_cr,c_black);
-         if(i=1)then boxColor(vid_screen,rx-fog_chw,ry-fog_chw,rx+fog_chw,ry+fog_chw,c_ablack);
+         if(i=0)then filledcircleColor(_screen,rx,ry,fog_cr,c_black);
+         if(i=1)then boxColor(_screen,rx-fog_chw,ry-fog_chw,rx+fog_chw,ry+fog_chw,c_ablack);
          inc(ry,fog_cw);
       end;
       inc(rx,fog_cw);
@@ -91,323 +177,176 @@ begin
 
    if(g_mode=gm_ct)then
     for i:=1 to MaxPlayers do
-     with g_pt[i] do
+     with g_ct_pl[i] do
      begin
-        rx:=x-vid_vx;
-        ry:=y-vid_vy;
-        circleColor(vid_screen,rx,ry,point_r,p_colors[p]);
+        circleColor(_screen,px-vid_vx,py-vid_vy,g_ct_pr,plcolor[pl]);
+        //if(_testmode)then _draw_text(_screen,px-vid_vx,py-vid_vy,i2s(ct) , ta_left,255, plcolor[pl]);
+
+        if(vid_rtui=0)then
+        begin
+           if(ct>0)and((G_Step mod 20)>10)
+           then circleColor(_minimap,mpx,mpy,map_prmm,c_gray)
+           else circleColor(_minimap,mpx,mpy,map_prmm,plcolor[pl]);
+        end;
      end;
 
-   if(_mmode=mm_camp)then
-    if(_mcmp_sm in [4,7,9])then
-     if(G_Step<=cmp_inhelltime)then boxColor(vid_screen,vid_panel,0,vid_mw,vid_mh,c_white);
-end;
-
-
-procedure _draw_hints;
-var i:byte;
-begin
- if(_rpls_rst<rpl_rhead)then
-  if(m_bx<3)and(m_by>3)and(m_by<12)then
-   with _players[PlayerHuman] do
+   if(menu_s2=ms2_camp)then
    begin
-      i:=((m_by-4)*3)+(m_bx mod 3);
-      _draw_text(vid_screen,146,580,str_hints[race,i,0],ta_left,255,c_white);
-      _draw_text(vid_screen,146,590,str_hints[race,i,1],ta_left,255,c_white);
-   end;
-end;
-
-procedure _draw_messages;
-var i:byte;
-begin
-   if(_igchat)then
-   begin
-      for i:=0 to net_lg_cs do _draw_ctext(vid_screen,148,560-13*i,net_lg_c[i]);
-      _draw_text(vid_screen,148,570,':'+chat_m , ta_left,255, p_colors[PlayerHuman]);
-   end
-   else
-     if(net_lg_lmt>0)then
-     begin
-        _draw_ctext(vid_screen,148,560,net_lg_c[0]);
-        dec(net_lg_lmt,1);
-     end;
-
-   case g_status of
- gs_win : _draw_text(vid_screen,472,2,str_win   ,ta_middle,255,c_lime);
- gs_lose: _draw_text(vid_screen,472,2,str_lose  ,ta_middle,255,c_red);
-   end;
-   if(G_paused>0)and(net_cl_con or net_sv_up)then _draw_text(vid_screen,472,12,str_pause ,ta_middle,255,p_colors[G_paused]);
-
-   if(_rpls_rst=rpl_rend)then _draw_text(vid_screen,472,2,str_repend,ta_middle,255,c_white);
-
-   _draw_hints;
-end;
-
-
-procedure _sprb_add(spr:psdl_surface;sx,sy,depth,shh:integer;rcol:cardinal;co:single;ch:char;al:byte;ra:boolean;tac:cardinal;tapcm,tapcc:byte);
-begin
-   if(vid_sbufs<MaxSprBuffer)and(_menu=false)and(G_Paused=0)then
-   begin
-      inc(vid_sbufs,1);
-      with vid_sbuf[vid_sbufs] do
+      if(ui_msks>=0)then
       begin
-         s :=spr;
-         d :=depth;
-         c :=rcol;
-         x :=sx-vid_vx;
-         y :=sy-vid_vy;
-         o :=co;
-         h :=ch;
-         sh:=shh;
-         i :=al;
-         r :=ra;
-         ac:=tac;
-         apcm:=tapcm;
-         apcc:=tapcc;
+         if(integer(ui_msk+ui_msks)>255)
+         then ui_msk:=255
+         else inc(ui_msk,ui_msks);
+      end
+      else
+      begin
+         if(integer(ui_msk+ui_msks)<0)
+         then ui_msk:=0
+         else inc(ui_msk,ui_msks);
+      end;
+      if(ui_msk>0)then
+      begin
+         boxColor(_screen,vid_panel,0,vid_mw,vid_mh,rgba2c(255,255,255,ui_msk));
+         if(vid_rtui=0)then dec(ui_msks,1);
       end;
    end;
-end;
-
-procedure _draw_sprb_sort;
-var i,j:integer;
-    p:TSprD;
-begin
-   if(vid_sbufs>1)then
-    for i:=1 to vid_sbufs do
-     for j:=1 to (vid_sbufs-1) do
-      if (vid_sbuf[j].d<vid_sbuf[j+1].d)then
-      begin
-         p:=vid_sbuf[j];
-         vid_sbuf[j]:=vid_sbuf[j+1];
-         vid_sbuf[j+1]:=p;
-      end;
-end;
-
-procedure _draw_sprb;
-var sx,sy:integer;
-begin
-   _draw_sprb_sort;
-   if(G_Paused=0)
-   then vid_sbufsp:=vid_sbufs
-   else vid_sbufs:=vid_sbufsp;
-
-   while (vid_sbufs>0) do
-    with vid_sbuf[vid_sbufs] do
-    begin
-       if(sh>0)then
-       begin
-          sx:=(s^.w shr 1);
-          filledellipseColor(vid_screen,x+sx,y+sh,sx,s^.h div 4,c_ablack);
-       end;
-       SDL_SetAlpha(s,SDL_SRCALPHA or SDL_RLEACCEL,i);
-
-       _draw_surf(vid_screen,x,y,s);
-
-       if(ac>0)then
-       begin
-          sx:=s^.w shr 1;
-          sy:=s^.h shr 1;
-          filledellipseColor(vid_screen,x+sx,y+sy,sx,sy,ac);
-       end;
-
-       if(r)then rectangleColor(vid_screen,x,y,x+s^.w,y+s^.h, c);
-       if(o>0)then
-       begin
-          boxColor(vid_screen,x,y-3,x+s^.w,y,c_black);
-          boxColor(vid_screen,x,y-3,x+trunc(o*s^.w),y,c);
-       end;
-       if(h<>#0)then characterColor(vid_screen,x,y,h,c_white);
-       if(apcm>0)then
-       begin
-          _draw_text(vid_screen,x+s^.w+7,y+s^.h-8,b2s(apcm),ta_right,255,c_white);
-          _draw_text(vid_screen,x+1     ,y+s^.h-8,b2s(apcc),ta_left ,255,c_white);
-       end;
-
-       SDL_SetAlpha(s,SDL_SRCALPHA or SDL_RLEACCEL,255);
-
-       dec(vid_sbufs,1);
-    end;
-
-   if(ui_mc_a>0)then
-   begin
-      sx:=ui_mc_a div 2;
-      sy:=sx shr 1;
-      ellipseColor(vid_screen,ui_mc_x-vid_vx,ui_mc_y-vid_vy,sx,sy,ui_mc_c);
-
-      if(G_Paused=0)then dec(ui_mc_a,1);
-   end;
-end;
-
-
-procedure _draw_selrect;
-begin
-   if (m_sxs>-1) then rectangleColor(vid_screen,m_sxs-vid_vx, m_sys-vid_vy, m_vx, m_vy, p_colors[PlayerHuman]);
 end;
 
 procedure _draw_dbg;
-var p:byte;
-x,y:integer;
-begin
-   y:=100;
-
-   _draw_text(vid_screen,  150, y, 'army', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+10, 'men/cen', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+20, 'units', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+30, 'builds', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+40, 's u', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+50, 's b', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+60, 'upgr', ta_left,255, c_white);
-
-   _draw_text(vid_screen,  150, y+80, 'u0', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+90, 'u3', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+100,'u5', ta_left,255, c_white);
-
-   _draw_text(vid_screen,  150, y+120, 'ai push', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+130, 'ai part', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+140, 'ai skill', ta_left,255, c_white);
-
-   _draw_text(vid_screen,  150, y+200, 'units add', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+210, 'builds add',ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+220, 'units kill', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+230, 'builds dest',ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+240, 'units lost', ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+250, 'builds lost',ta_left,255, c_white);
-   _draw_text(vid_screen,  150, y+260, 'upgr level',ta_left,255, c_white);
-
-   for p:=0 to MaxPlayers do
-    with _players[p] do
-    begin
-       x:=260+122*p;
-       _draw_text(vid_screen,  x, y, i2s(army)+'/'+b2s(ai_maxarmy), ta_middle,255, p_colors[p]);
-       _draw_text(vid_screen,  x, y+10, i2s(cenerg)+'/'+i2s(menerg), ta_middle,255, c_white);
-
-       _draw_text(vid_screen,  x, y+20, i2s(eu[false,0])+','+i2s(eu[false,1])+','+i2s(eu[false,2])+','+i2s(eu[false,3])+','+i2s(eu[false,4])+','+i2s(eu[false,5])+','+i2s(eu[false,6]), ta_middle,255, c_white);
-       _draw_text(vid_screen,  x, y+30, i2s(eu[true,0])+','+i2s(eu[true,1])+','+i2s(eu[true,2])+','+i2s(eu[true,3])+','+i2s(eu[true,4])+','+i2s(eu[true,5])+','+i2s(eu[true,6]), ta_middle,255, c_white);
-
-       _draw_text(vid_screen,  x, y+50, i2s(su[true,0])+','+i2s(su[true,1])+','+i2s(su[true,2])+','+i2s(su[true,3])+','+i2s(su[true,4])+','+i2s(su[true,5]), ta_middle,255, c_white);
-
-       _draw_text(vid_screen,  x, y+60, i2s(upgr[0])+i2s(upgr[1])+i2s(upgr[2])+i2s(upgr[3])+i2s(upgr[4])+i2s(upgr[5])+i2s(upgr[6])+i2s(upgr[7]), ta_middle,255, c_white);
-
-       _draw_text(vid_screen,  x, y+80, i2s(u0), ta_middle,255, c_white);
-       _draw_text(vid_screen,  x, y+90, i2s(u3), ta_middle,255, c_white);
-       _draw_text(vid_screen,  x, y+100, i2s(u5), ta_middle,255, c_white);
-
-       _draw_text(vid_screen,  x, y+120, i2s(ai_minpush), ta_middle,255, c_white);
-       _draw_text(vid_screen,  x, y+130, i2s(ai_partpush), ta_middle,255, c_white);
-       _draw_text(vid_screen,  x, y+140, i2s(ai_skill), ta_middle,255, c_white);
-
-       circleColor(vid_screen,ai_bx[p]-vid_vx,ai_by[p]-vid_vy,50,p_colors[p]);
-    end;
-end;
-
-procedure dubdg;
 var u,ix,iy:integer;
 begin
+   {_draw_text(_screen,750,0,i2s(m_mx)+' '+i2s(m_my) , ta_right,255, c_white);
+
+   if(k_shift>2) then
+   for u:=0 to MaxPlayers do
+    with _players[u] do
+    begin
+       ix:=180+120*u;
+
+       _draw_text(_screen,ix,90,b2s(army)+' '+b2s(u_c[false]) , ta_middle,255, plcolor[u]);
+
+       _draw_text(_screen,ix,100,b2s(ai_skill)+' '+b2s(ai_maxarmy)+' '+b2s(ai_attack) , ta_middle,255, plcolor[u]);
+       _draw_text(_screen,ix,110,b2s(cenerg)+' '+b2s(menerg) , ta_middle,255, plcolor[u]);
+
+       for iy:=0 to 8  do _draw_text(_screen,ix,120+iy*10,b2s(u_e[true ,iy])+' '+b2s(u_s[true ,iy])+' '+i2s(ubx[iy]), ta_left,255, plcolor[u]);
+       for iy:=0 to 11 do _draw_text(_screen,ix,220+iy*10,b2s(u_e[false,iy])+' '+b2s(u_s[false,iy]), ta_left,255, plcolor[u]);
+    end; }
+
+   if(k_ctrl>2)then
    for u:=1 to MaxUnits do
     with _units[u] do
-     if(hits>0)then
+     if(hits>dead_hits)and(player=HPlayer)then
      begin
         ix:=x-vid_vx;
         iy:=y-vid_vy;
-        if(inapc=0) then inc(iy,10);
 
-        //if(dist2(m_mx,m_my,x,y)>r)then continue;// else dec(hits,1);
+        circleColor(_screen,ix,iy,r,c_gray);
+        circleColor(_screen,ix,iy,sr,c_gray);
 
-        if(k_shift>1)then
+        if(inapc>0)then continue;
+
+        if(hits>0)and(uid=UID_URocketL)then
         begin
-           circleColor(vid_screen,ix,iy,sr,c_white);
-           circleColor(vid_screen,ix,iy,r,c_gray);
+           if(alrm_x>0)then lineColor(_screen,ix,iy,alrm_x-vid_vx,alrm_y-vid_vy,plcolor[player]);
+           //if(tar1>0)then lineColor(_screen,ix,iy,_units[tar1].x-vid_vx,_units[tar1].y-vid_vy,c_white);
+            lineColor(_screen,ix+10,iy+10,uo_x-vid_vx,uo_y-vid_vy,c_white);
         end;
 
-        if(_uclord=0)then filledCircleColor(vid_screen,ix,iy,r,c_white);
-        with _players[player] do if(u1=u)then filledCircleColor(vid_screen,ix,iy,r div 2,c_yellow);
+         _draw_text(_screen,ix,iy,i2s(hits), ta_left,255, plcolor[player]);
 
-       _draw_text(vid_screen,ix,iy,i2s(apcc)+' '+i2s(ma),ta_left,255,p_colors[player]);
+        {if(hits>0)then
+         if(k_shift>2)
+         then lineColor(_screen,ix,iy,uo_x-vid_vx,uo_y-vid_vy,c_black)
+         else
+           if(alrm_x<>0)then
+            lineColor(_screen,ix,iy,alrm_x-vid_vx,alrm_y-vid_vy,plcolor[player]);
 
-       if(player=1)then
-       lineColor(vid_screen,ix,iy,alx-vid_vx,aly-vid_vy,c_black);
+        _draw_text(_screen,ix,iy,i2s(u)+' '+i2s(rld_a), ta_left,255, plcolor[player]);// }
 
-
-       if(ucl=uid_fapc)then
-        lineColor(vid_screen,ix,iy,mx-vid_vx,my-vid_vy,c_orange);
-
-       if(radar)and(rld>0)then lineColor(vid_screen,ix,iy, (mx*fog_cw)-vid_vx,(my*fog_cw)-vid_vy,p_colors[player]);
+        //if(sel)then  circleColor(_screen,ix,iy,r+5,plcolor[player]);
      end;
 
-   circleColor(vid_screen,m_vx,m_vy,45,c_yellow);
-   circleColor(vid_screen,m_vx,m_vy,55,c_white);
-end;
-
-procedure _draw_terrain;
-var i,ix,iy,s:integer;
-begin
-   _draw_surf(vid_screen,vid_panel-((vid_vx+vid_panel) mod ter_w),-vid_vy mod ter_h, vid_terrain);
-
-   for i:=1 to MaxADecs do
-    with terdcs[i] do
+   {for u:=0 to 255 do
+    if(ordx[u]>0)then
     begin
-       ix:=x-vid_vx-vid_mw;
-       iy:=y-vid_vy-vid_mh;
+       ix:=ordx[u]-vid_vx;
+       iy:=ordy[u]-vid_vy;
 
-       if((x+y) mod 2)=0
-       then s:=1+(i+(abs(iy div vid_mh))) mod MaxADecSpr
-       else s:=1+(i+(abs(ix div vid_mw))) mod MaxADecSpr;
-
-       if(map_trt in [0,17])
-       then s:=13+(s mod 6)
-       else s:=(s mod 14);
-
-       if(s=0)then continue;
-
-       spr:=@spr_adecs[s];
-
-       ix:=ix mod vid_mw;
-       iy:=iy mod vid_mh;
-
-       if(ix<0) then ix:=vid_mw+ix;
-       if(iy<0) then iy:=vid_mh+iy;
-
-       _draw_surf(vid_screen,ix,iy-spr^.hh,spr^.surf);
-    end;
-
-   if(g_mode=gm_inv)then _draw_surf(vid_screen,map_psx[0]-spr_u_portal.hw-vid_vx, map_psy[0]-spr_u_portal.hh-vid_vy,spr_u_portal.surf);
+       _draw_text(_screen,ix,iy,i2s(u), ta_left,255, c_white);
+    end; }
 end;
 
-procedure DrawINGame;
+procedure D_Game;
 begin
-   _draw_terrain;
+   D_terrain;
+   D_SpriteList;
+   D_fog;
+   D_ui;
+   D_UIText;
+   if(m_sxs>-1)then rectangleColor(_screen,m_sxs-vid_vx, m_sys-vid_vy, m_vx, m_vy, plcolor[HPlayer]);
 
-   _draw_sprb;
-   _draw_fog;
+   if(_testmode)and(net_nstat=0)then _draw_dbg;
+end;
 
-   _draw_ui;
-   _draw_surf(vid_screen,0,0,vid_spanel);
-   _draw_messages;
-   _draw_selrect;
+procedure DrawDedScr;
+var p,y:integer;
+begin
+   if(vid_mredraw)then
+   begin
+      SDL_FillRect(_screen,nil,0);
+      _draw_surf(_screen,0,0,_minimap);
+
+      if(G_WTeam<255)
+      then _draw_text(_screen,344,0,'Team #'+b2s(G_WTeam)+' win!',ta_right,255,c_white)
+      else
+        if(g_paused>0)then _draw_text(_screen,344,13,str_pause,ta_right,255,plcolor[g_paused]);
+
+      _draw_text(_screen,148  ,3  , w2s(map_seed)                 , ta_left  ,255, c_white);
+      _draw_text(_screen,148  ,15 , str_m_siz+i2s(map_mw)         , ta_left  ,255, c_white);
+      _draw_text(_screen,148  ,27 , str_m_liq+str_m_liqC[map_liq] , ta_left  ,255, c_white);
+      _draw_text(_screen,148  ,39 , str_m_obs+b2s(map_obs)        , ta_left  ,255, c_white);
+
+      _draw_text(_screen,344  ,23 , b2pm[g_started], ta_right,255, c_white);
+      _draw_text(_screen,344  ,3  , net_sv_pstr    , ta_right,255, c_white);
+
+
+      _draw_text(_screen,148  ,51 , str_addon[g_addon], ta_left,255, c_white);
+      _draw_text(_screen,148  ,63 , str_gmode[g_mode ], ta_left,255, c_white);
+
+      for p:=1 to MaxPlayers do
+       with _players[p] do
+       begin
+          y:=87+(p-1)*12;
+          if(state=ps_none)
+          then _draw_text(_screen,148,y  , '---', ta_left  ,255, c_white)
+          else
+          begin
+             _draw_text(_screen,148 ,y  , name, ta_left  ,255, c_white);
+             characterColor(_screen,252,y,_plst(p),plcolor[p]);
+             _draw_text(_screen,270 ,y  , str_race[race], ta_left  ,255, c_white);
+             _draw_text(_screen,330 ,y  , b2s(team), ta_left  ,255, c_white);
+          end;
+       end;
+
+      vid_mredraw:=false;
+   end;
 end;
 
 procedure DrawGame;
 begin
-   if(_menu)
-   then DrawMenu
-   else DrawINGame;
-
-   if(_testmode)then
+   if(_ded=false)then
    begin
-      if(k_ctrl>2)then dubdg;
-      if(k_shift>1)then _draw_dbg;
+      SDL_FillRect(_screen,nil,0);
 
-      _draw_text(vid_screen,200,0,i2s(m_mx)+' '+i2s(m_my),ta_left,255,c_white);
+      if(_menu)
+      then D_Menu
+      else D_Game;
 
-      _draw_text(vid_screen,300,0,i2s(vid_sbufsp)+' '+c2s(map_seed)+' '+b2pm[vid_mredraw]+' '+c2s(net_cl_svip)+' '+w2s(net_cl_svport),ta_left,255,c_white);
+      _draw_surf(_screen,m_vx,m_vy,spr_cursor);
+   end
+   else DrawDedScr;
 
-      _draw_text(vid_screen,600,0,i2s(fps),ta_left,255,c_white);
-
-   end;
-
-   _draw_surf(vid_screen, m_vx,m_vy, spr_cursor);
-   sdl_flip(vid_screen);
-   vid_mredraw:=false;
+   sdl_flip(_screen);
 end;
 
 

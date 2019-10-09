@@ -2,134 +2,194 @@
 var _CYCLE       : boolean = false;
     _EVENT       : pSDL_EVENT;
 
-    _testmode    : boolean = false;
-
-    startcon     : boolean = false;
-    startcons    : string = '';
-
-    vid_flags    : cardinal = SDL_SWSURFACE;
-
-    vid_draw     : boolean = true;
-
-    vid_dsurf,
-    vid_minimap,
-    vid_terrain,
-    vid_menu,
-    vid_spanel,
-    vid_screen   : pSDL_SURFACE;
-
-    vid_mw       : integer = 800;
-    vid_mh       : integer = 600;
-    vid_bpp      : integer = 32;
-    vid_panel    : integer = 144;
-
-    vid_vmb_x0   : integer = 5;
-    vid_vmb_y0   : integer = 5;
-    vid_vmb_x1   : integer = 0;
-    vid_vmb_y1   : integer = 0;
-
-    vid_menuX    : integer = 0;
-
-    vid_wide     : boolean = false;
-
-    vid_mredraw  : boolean = false;
-    vid_mmredraw : boolean = false;
+    ter_s,
+    _uipanel,
+    _dsurf,
+    _minimap,
+    _bminimap,
+    _SCREEN,
+    _menu_surf   : pSDL_SURFACE;
+    _vflags      : cardinal = SDL_SWSURFACE;
 
     _RECT        : pSDL_RECT;
 
-    ter_w        : integer = 1;
-    ter_h        : integer = 1;
-    ter_s        : pSDL_Surface;
+    _ded         : boolean = false;
 
-    terdcs       : array[1..MaxADecs] of TAdec;
 
-    onlySVCode   : boolean = false;
-
-    CLUnits      : integer = 400;
-
-    font_ca      : array[#0..#255] of pSDL_Surface;
-
-    net_cl_svstr : string = '127.0.0.1:10666';
-    net_cl_svip  : cardinal = 0;
-    net_cl_svport: word = 10666;
-    net_cl_con   : boolean = false;
-    net_cl_svpl  : byte = 0;
-    net_cl_svttl : integer = 0;
-    net_sv_pstr  : string = '10666';
-    net_sv_port  : word = 10666;
-    net_sv_up    : boolean = false;
-
-    net_socket   : PUDPSocket;
-    net_buf      : PUDPpacket;
-
-   net_lg_ci     : cardinal=0;
-   net_lg_c      : array[0..net_lg_cs] of string;
-   net_lg_lmt    : integer = 0;
-
-   net_m_error   : string = '';
-
-   _svld_lst     : array of string;//[0..MaxSVLD]
-   _svld_lsts    : byte = 0;
-   _svld_srl     : integer = 0;
-   _svld_sm      : integer = 0;
-   _svld_str     : string = '';
-   _svld_stat    : string = '';
-
-   _rpls_lst     : array of string;//[0..MaxSVLD]
-   _rpls_lsts    : byte = 0;
-   _rpls_rst     : byte = rpl_none;
-   _rpls_pnu     : byte = 30;
-   _rpls_u       : integer = 0;
-   _rpls_file    : file;
-   _rpls_fileo   : boolean = false;
-   _rpls_lrname  : string = 'LastReplay';
-   _rpls_srl     : integer = 0;
-   _rpls_sm      : integer = 0;
-   _rpls_stat    : string = '';
-   _rpls_step    : integer = 1;
-
-    _fscr        : boolean = true;
+    _fscr        : boolean = false;
     _igchat      : boolean = false;
-    _menu        : boolean = true;
-    _m_sel       : byte = 0;  // menu item select
-    _mmode       : byte = mm_mult;
-    _mmode2      : byte = mm_sett;
-    _mcmp_sm     : byte = 1;
-    _mcmp_srl    : byte = 0;
+    _draw        : boolean = true;
 
-    _warpten     : boolean = false;
-    _invuln      : boolean = false;
+    _testmode    : boolean = false;
     _fsttime     : boolean = false;
+    _warpten     : boolean = false;
 
-    PlayerHuman  : byte = 1;
+    _menu        : boolean = true;
+    menu_s1      : byte = ms1_sett;
+    menu_s2      : byte = ms2_scir;
+    m_chat       : boolean = false;
+
+    m_vrx,
+    m_vry,
+    mv_x,
+    mv_y         : integer;
+
     PlayerName   : string = 'Player';
     PlayerTeam   : byte = 1;
-    PlayerRace   : byte = r_random;
     PlayerReady  : boolean = false;
-    PlayerNUnits : byte = 100;
-    PlayerNUR    : byte = 2;
+    PlayerRace   : byte = 0;
 
+    UnitStepNum  : byte = 8;
+
+    vid_mw       : integer = 800;
+    vid_mh       : integer = 600;
+    vid_vmb_x0   : integer = 6;
+    vid_vmb_y0   : integer = 6;
+    vid_vmb_x1   : integer = 794;
+    vid_vmb_y1   : integer = 594;
+    vid_mwa      : integer = 0; //vid_mw+vid_ab;
+    vid_mha      : integer = 0; //vid_mh+vid_ab*2;
+    vid_uiuphx   : integer = 0;
+    vid_ingamecl : byte = 0;
+
+    vid_mredraw  : boolean = true;
+    vid_terrain  : pSDL_SURFACE;
+    vid_rtui     : byte = 0;
+
+    ter_w,
+    ter_h        : integer;
+
+    font_ca      : array[char] of pSDL_SURFACE;
+
+    G_Addon      : boolean = true;
     G_Started    : boolean = false;
-    G_Step       : cardinal = 0;
     G_Paused     : byte = 0;
-    G_Status     : byte = gs_game; //gs_game, gs_lose, gs_win
+    G_WTeam      : byte = 255;
+    G_mode       : byte = 0;
+    G_loss       : byte = 0;
+    G_starta     : byte = 0;
+    G_onebase    : boolean = false;
+    G_Step       : cardinal = 0;
 
-    G_Mode       : byte = gm_scir;
+    g_inv_mn     : byte = 0;
+    g_inv_wn     : byte = 0;
+    g_inv_t      : integer = 0;
 
-    _lau         : integer = 0; // last added unit
+    g_ct_pl      : array[1..MaxPlayers] of TCTPoint;
 
-    rad_rld_ic   : array[false..true] of cardinal;
+    onlySVCode   : boolean = true;
 
-    p_colors     : array[0..MaxPlayers] of cardinal;
+    _units       : array[0..MaxUnits  ] of TUnit;
+    _players     : TPList;
+    _missiles    : array[1..MaxMissiles ] of TMissile;
+    _effects     : array[1..vid_mvs     ] of TEff;
 
-    _missiles    : array[1..MaxMissiles] of TMissile;
-    _units       : array[0..MaxUnits   ] of TUnit;
-    _players     : array[0..MaxPlayers ] of TPlayer;
-    _effects     : array[1..MaxSprBuffer] of TEff;
+    MaxSDecsS    : byte = 0;      //960 720
+    _SDecs       : array of TAdec;
 
-    _regen       : integer = 0;
-    prdc_units   : byte = 0;
-  UnitStepNumNet : integer = UnitStepNum;
+    _uclord_c    : integer = 0;
+    _uregen_c    : integer = 0;
+
+    _ulst        : array[byte] of TUnit;
+    upgrade_time : array[1..2,0.._uts] of integer;
+    upgrade_cnt  : array[1..2,0.._uts] of byte;
+
+    _lsuc        : byte = 0;
+    _lcu         : integer = 0;
+    _lcup        : PTUnit;
+    cl2uid       : array[1..2,false..true,0.._uts] of byte;
+    _pne_b,
+    _pne_u,
+    _pne_r       : array[1..2,0.._uts] of byte;
+
+    plcolor      : array[0..MaxPlayers] of cardinal;
+
+    HPlayer      : byte = 1;
+
+    team_army    : array[0..MaxPlayers] of integer;
+
+    map_seed     : word = 1;
+    map_seed2    : integer = 0;
+    map_mw       : integer = 5000;
+    map_trt      : byte=0;
+    map_ptrt     : byte = 255;
+    map_lqt      : byte=0;
+    map_plqt     : byte = 255;
+    map_mm_liqc  : cardinal = 0;
+    map_obs      : byte = 1;
+    map_liq      : byte = 1;
+    map_pliq     : byte = 255;
+    map_ffly     : boolean = false;
+    map_mmcx     : single;
+    map_mmvw,
+    map_mmvh,
+    map_prmm,
+    map_b1       : integer;
+    map_psx      : array[0..MaxPlayers] of integer;
+    map_psy      : array[0..MaxPlayers] of integer;
+    map_psr      : array[0..MaxPlayers] of integer;
+    map_dds      : array[1..MaxDoodads] of TDoodad;
+    map_flydpth  : array[0..2] of integer;
+
+    cmp_skill    : byte = 3;
+    cmp_mmap     : array[0..MaxMissions] of pSDL_Surface;
+    cmp_ait2p    : word = 0;
+
+    net_cl_svip  : cardinal = 0;
+    net_cl_svport: word = 10666;
+    net_cl_svttl : integer = 0;
+    net_cl_svpl  : byte = 0;
+    net_nstat    : byte = 0;
+    net_m_error  : string = '';
+    net_sv_pstr  : string = '10666';
+    net_cl_svstr : string = '127.0.0.1:10666';
+    net_sv_port  : word = 10666;
+    net_socket   : PUDPSocket;
+    net_buf      : PUDPpacket;
+    net_period   : byte = 0;
+    net_chat_s   : byte = 0;
+    net_chat     : array[0..MaxNetChat] of string;
+    net_chat_shlm: integer = 0;
+    net_chat_str : string = '';
+    net_pnui     : byte = 2;
+
+    _svld_stat   : string = '';
+    _svld_str    : string = '';
+    _svld_l      : array of string;
+    _svld_ln     : integer = 0;
+    _svld_ls     : integer = 0;
+    _svld_sm     : integer = 0;
+
+    _rpls_file   : file;
+    _rpls_fileo  : boolean = false;
+    _rpls_u      : integer = 0;
+    _rpls_pnui   : byte = 0;
+    _rpls_pnu    : byte = 0;
+    _rpls_lrname : string = 'LastReplay';
+    _rpls_stat   : string = '';
+    _rpls_rst    : byte = rpl_none;
+    _rpls_l      : array of string;
+    _rpls_ln     : integer = 0;
+    _rpls_ls     : integer = 0;
+    _rpls_sm     : integer = 0;
+    _rpls_step   : integer = 1;
+    _rpls_nwrch  : boolean = false;
+    _rpls_log    : boolean = false;
+
+
+    _cmp_sm      : integer = 0;
+    _cmp_sel     : integer = 0;
+
+    vid_vx       : integer = 0;
+    vid_vy       : integer = 0;
+    vid_vmspd    : integer = 25;
+    vid_mmvx,
+    vid_mmvy     : integer;
+    vid_vmm      : boolean = false;
+
+    vid_vsl      : array[1..vid_mvs] of TVisSpr;
+    vid_vsls     : word = 0;
+    vid_vslsp    : word = 0;
 
     fog_cw       : integer = 0; // map_mw/fog_cs
     fog_chw      : integer = 0; // fog_cw/2
@@ -139,60 +199,58 @@ var _CYCLE       : boolean = false;
     fog_c        : array[0..fog_cs] of array[0..fog_cs] of byte;
     fog_ix       : byte = 0;
     fog_iy       : byte = 0;
-    radar_fr     : byte = 0;
     _fog         : boolean = true;//false;
     _fcx         : array[0..MFogM,0..MFogM] of byte;
 
-    map_mw       : integer = 4000;
-    map_b1       : integer = 0;
-    map_mmcx     : single  = 0;   //mini-map coff = (vid_panel-2)/map_mw;
-    map_mmvw     : integer = 0;   //mini-map vid w = trunc((vid_mw-vid_panel)*map_mmcx);
-    map_mmvh     : integer = 0;   //mini-map vid h = trunc( vid_mh*map_mmcx);
-    map_mm_liqc  : cardinal = 0;
-    map_lqt      : byte = 0;
-    map_trt      : byte = 0;
-    map_seed     : cardinal = 0;
-    map_pos      : byte = 0;
-    map_obs      : byte = 1;
-    map_liq      : boolean = false;
-    map_psx      : array[0..MaxPlayers] of integer;
-    map_psy      : array[0..MaxPlayers] of integer;
-    map_dds      : array[1..MaxDoodads] of TDoodad;
-    map_ffly     : boolean = false;
+    _lng         : boolean = false;
 
-    map_plqt     : byte = 255;
-    map_ptrt     : byte = 255;
+    ordx,
+    ordy         : array[0..255] of integer;
 
-    mmap_pr      : byte = 1;
+    _m_sel,
+    m_sxs,
+    m_sys,
+    m_mx,
+    m_my,
+    m_vx,
+    m_vy         : integer;
+    m_ldblclk,
+    m_sbuildc    : cardinal;
+    m_sbuild,
+    m_bx,
+    m_by         : byte;
+    m_vmove      : boolean = false;
+    m_a_inv      : boolean = false;
 
-    vid_vx       : integer = 0;     // vid pos
-    vid_vy       : integer = 0;
-    vid_mmvx     : integer = 0;     // mini-map vid pos
-    vid_mmvy     : integer = 0;
-    vid_vms      : byte = 25;       // vid move speed
-    vid_vmm      : boolean = false; // vid move with mouse
+    ui_mc_x,
+    ui_mc_y,
+    ui_mc_a      : integer;
+    ui_mc_c      : cardinal;
 
-    _ma_inv      : boolean = false;
+    ui_tab       : byte = 0;
+    ui_bldrs_x   : array[0.._uts] of integer;
+    ui_bldrs_y   : array[0.._uts] of integer;
+    ui_bldrs_r   : array[0.._uts] of integer;
+    ui_muc       : array[false..true] of cardinal;
+    ui_trnt      : array[0.._uts] of integer;
+    ui_trntc     : array[0.._uts] of byte;
+    ui_upgrc     : byte;
+    ui_upgrl     : integer = 0;
+    ui_upgr      : array[0.._uts] of integer;
+    ui_apc       : array[0.._uts] of byte;
+    ui_blds      : array[0.._uts] of byte;
+    ui_alrms     : array[0..vid_uialrm_n] of TAlarm;
+    ui_umark_u   : integer = 0;
+    ui_umark_t   : byte = 0;
 
-    cmp_portal   : integer = 0;
-    cmp_hellagr  : boolean = false;
+    ui_msk       : byte = 0;
+    ui_msks      : shortint = 0;
 
-    _moveView    : boolean = false;
+    ui_rad_rld   : array[false..true] of cardinal;
 
-    vid_sbuf     : array[1..MaxSprBuffer] of TSprD;
-    vid_sbufs    : integer = 0;
-    vid_sbufsp   : integer = 0;
-
-    chat_m       : string = '';
-    chat_nrlm    : boolean = false;
-
-    k_chr        : char;            // keyboard
-    k_chrt       : byte = 0;
-    k_chrtt      : byte = 25;
-    k_kbstr      : TSoc = [#192..#255,'A'..'Z','a'..'z','0'..'9','"','[',']','{','}',' ','_',',','.','(',')','<','>','-','+','`','@','#','%','?',':','$'];
-    k_kbdig      : TSoc = ['0'..'9'];
-    k_kbaddr     : TSoc = ['0'..'9','.',':'];
-
+    k_dbl,
+    k_msst,
+    k_mssp,
     k_l,
     k_r,
     k_u,
@@ -201,8 +259,12 @@ var _CYCLE       : boolean = false;
     k_ctrl,
     k_alt,
     k_ml,
-    k_mr         : byte;
+    k_mr,
+    k_chrt       : cardinal;
+    k_chr        : char;
 
+    c_dred,
+    c_awhite,
     c_red,
     c_ared,
     c_ablue,
@@ -211,6 +273,7 @@ var _CYCLE       : boolean = false;
     c_brown,
     c_yellow,
     c_dyellow,
+    c_lava,
     c_lime,
     c_green,
     c_dblue,
@@ -219,304 +282,371 @@ var _CYCLE       : boolean = false;
     c_white,
     c_agray,
     c_gray,
+    c_dgray,
     c_ablack,
     c_purple,
-    c_black      : cardinal;
+    c_black       : cardinal;
 
-    m_vx,        // mouse
-    m_vy,
-    m_mx,
-    m_my,
-    m_sxs,
-    m_sys        : integer;
-    m_bx,
-    m_by         : byte;
-    m_vmove      : boolean = false;
-    m_ldblclk    : byte = 0;
-    m_sbuild     : byte = 255;
-    m_sbuildc    : cardinal = 0;
+    _sbtnc        : array[false..true] of cardinal;
 
-    ui_urc       : array[0.._uts] of byte;
-    ui_ur        : array[0.._uts] of integer;
-    ui_apc       : array[0.._uts] of integer;
-    ui_alarm     : integer = 0;
-    ui_cl        : cardinal;
-    ui_ax,
-    ui_ay        : integer;
-    ui_isb       : boolean = false;
+    //fps_dt,
+    fps_cs,
+    fps_ns        : cardinal;
+    //_stmp:string;
 
-    ui_mc_x,
-    ui_mc_y,
-    ui_mc_a      : integer;
-    ui_mc_c      : cardinal;
+    spr_liquid    : array[1..LiquidAnim] of TUSprite;
+    spr_sdecs     : array[0..MaxSDecs  ] of TUSprite;
+    spr_tdecs     : array[1..MaxTDecs  ] of TUSprite;
+    spr_crater    : TUSprite;
 
-    g_inv_w      : byte = 0;
-    g_inv_t      : integer = 0;
+    spr_dummy     : TUsprite;
 
-    g_pt         : array[1..MaxPlayers] of TPoint;
+spr_lostsoul      : array[0..28] of TUsprite;
+spr_imp           : array[0..52] of TUsprite;
+spr_demon         : array[0..53] of TUsprite;
+spr_cacodemon     : array[0..29] of TUsprite;
+spr_baron         : array[0..52] of TUsprite;
+spr_knight        : array[0..52] of TUsprite;
+spr_cyberdemon    : array[0..56] of TUsprite;
+spr_mastermind    : array[0..81] of TUsprite;
+spr_pain          : array[0..37] of TUsprite;
+spr_revenant      : array[0..76] of TUsprite;
+spr_mancubus      : array[0..78] of TUsprite;
+spr_arachnotron   : array[0..69] of TUsprite;
+spr_archvile      : array[0..85] of TUsprite;
 
-    fps_s,
-    fps_p        : cardinal;
-    fps          : integer = 0;
+spr_ZFormer       : array[0..52] of TUSprite;
+spr_ZSergant      : array[0..52] of TUSprite;
+spr_ZSSergant     : array[0..52] of TUSprite;
+spr_ZCommando     : array[0..59] of TUSprite;
+spr_ZBomber       : array[0..52] of TUSprite;
+spr_ZFMajor       : array[0..15] of TUSprite;
+spr_ZMajor        : array[0..52] of TUSprite;
+spr_ZBFG          : array[0..52] of TUSprite;
 
-    ai_bx        : array[0..MaxPlayers] of integer;
-    ai_by        : array[0..MaxPlayers] of integer;
+spr_engineer      : array[0..44] of TUSprite;
+spr_medic         : array[0..52] of TUSprite;
+spr_sergant       : array[0..44] of TUSprite;
+spr_ssergant      : array[0..44] of TUSprite;
+spr_commando      : array[0..52] of TUSprite;
+spr_bomber        : array[0..44] of TUSprite;
+spr_fmajor        : array[0..15] of TUSprite;
+spr_major         : array[0..44] of TUSprite;
+spr_BFG           : array[0..44] of TUSprite;
+spr_FAPC          : array[0..15] of TUSprite;
+spr_APC           : array[0..15] of TUSprite;
+spr_Terminator    : array[0..55] of TUSprite;
+spr_Tank          : array[0..23] of TUSprite;
+spr_Flyer         : array[0..15] of TUSprite;
 
-   _lng          : boolean = false; // false=eng, true = rus
+spr_tur           : array[0..15] of TUSprite;
+spr_rtur          : array[0..7 ] of TUSprite;
 
-// text
+spr_HKeep,
+spr_HGate,
+spr_HSymbol,
+spr_HPools,
+spr_HTower,
+spr_HTeleport     : array[0..3]  of TUsprite;
 
-str_exit  :  array[false..true] of string;
+spr_UCommandCenter,
+spr_UMilitaryUnit,
+spr_UGenerator,
+spr_UWeaponFactory,
+spr_UTurret,
+spr_URadar,
+spr_UVehicleFactory,
+spr_URTurret,
+spr_URocketL        : array[0..3]  of TUsprite;
 
+spr_eff_bfg         : array[0..3] of TUsprite; //ef_bfg_
+spr_eff_eb          : array[0..5] of TUsprite; //ef_eb
+spr_eff_ebb         : array[0..8] of TUsprite; //ef_ebb
+spr_eff_tel         : array[0..5] of TUsprite; //ef_tel
+spr_eff_exp         : array[0..2] of TUsprite; //ef_exp_
+spr_eff_exp2        : array[0..4] of TUsprite; //exp2_
+spr_eff_g           : array[0..7] of TUsprite; //g_
 
-str_upd,
-str_player_def,
-str_gsaved,
-str_menu,
-str_autors,
-str_repend,
-str_sver,
-str_sfull,
-str_play,
-str_settings,
-str_campaigns,
-str_objectives,
-str_chat,
-str_players,
-str_map,
-str_saveload,
-str_replays,
-str_replay,
-str_scirmish,
-str_server,
-str_udpport,
-str_time,
-str_client,
-str_ipaddr,
-str_team,
-str_srace,
-str_ready,
-str_sound,
-str_musicvol,
-str_soundvol,
-str_game,
-str_scrollspd,
-str_mousescrl,
-str_fullscreen,
-str_plname,
-str_save,
-str_load,
-str_delete,
-str_pause,
-str_pnu,
-str_win,
-str_lose,
-str_sgst,
-str_connecting,
-str_random,
-str_gmodet,
-str_wave,
-str_monsters,
-str_m_obs,
-str_m_pos,
-str_m_liq,
-str_m_siz        : string;
+spr_h_p0            : array[0..3] of TUSprite;
+spr_h_p1            : array[0..3] of TUSprite;
+spr_h_p2            : array[0..3] of TUSprite;
+spr_h_p3            : array[0..7] of TUSprite;
+spr_h_p4            : array[0..10]of TUSprite;
+spr_h_p5            : array[0..7] of TUSprite;
+spr_h_p6            : array[0..7] of TUSprite;
+spr_h_p7            : array[0..5] of TUSprite;
 
+spr_u_p0            : array[0..5] of TUSprite;
+spr_u_p1            : array[0..3] of TUSprite;
+spr_u_p2            : array[0..5] of TUSprite;
+spr_u_p3            : array[0..7] of TUSprite;
 
-str_gmode        : array[0..3] of string = ('Scirmish','Two fortress','Invasion','Domination');
+spr_trans           : array[0..7] of TUSprite;
+spr_sport           : array[0..1] of TUSprite;
 
-str_rpl : array[0..5] of string = ('---','REC','REC','PLAY','PLAY','END');
+spr_blood           : array[0..2] of TUSprite;
 
-str_svld_errors: array[1..4] of string;
+spr_drone           : array[0..7] of TUSprite; // l_dron_
+spr_octo            : array[0..19]of TUSprite; // l_oct_
+spr_cycl            : array[0..54]of TUSprite; // l_cy_
 
-str_svup,
-str_connect,
-str_yn,
-str_reset        : array[false..true] of string;
+spr_o_p             : array[0..4] of TUSprite;
 
-str_race         : array[0..2]of string;
+spr_ubase           : array[0..5] of TUSprite;
 
-str_hints        : array[1..2] of array[0..23] of array[0..1] of string;
+spr_cbuild          : array[0..3] of TUSprite;
 
-str_m_posC       : array[0..1] of char = ('x','+');
+    spr_mp        : array[1..2] of TUsprite;
+    spr_gear,
+    spr_toxin,
+    spr_mine,
+    spr_HFortress,
+    spr_HMonastery,
+    spr_HTotem,
+    spr_HAltar,
+    spr_HBar,
+    spr_db_h0,
+    spr_db_h1,
+    spr_db_u0,
+    spr_db_u1,
+    spr_u_portal  : TUSprite;
 
-str_cmp_mn,
-str_cmp_ob,
-str_cmp_map      : array[1..MaxMissions] of string;
+    spr_mbackmlt,
+    spr_c_mars,
+    spr_c_hell,
+    spr_c_earth,
+    spr_c_phobos,
+    spr_c_deimos ,
+    spr_b_rfast,
+    spr_b_rskip,
+    spr_b_rfog,
+    spr_b_rlog,
+    spr_h_u4k,
+    spr_b_action,
+    spr_b_cancle,
+    spr_b_delete,
+    spr_panel,
+    spr_msl,
+    spr_mback,
+  //  spr_terrain,
+    spr_cursor   : pSDL_Surface;
 
-str_maction      : string;
-str_maction2     : array[false..true] of string;
+    spr_b_b      : array[1..2,0..8 ] of pSDL_Surface;
+    spr_b_u      : array[1..2,0..11] of pSDL_Surface;
+    spr_b_up     : array[1..2,0..MaxUpgrs] of pSDL_Surface;
 
-////
+    spr_tabs     : array[0..2] of pSDL_Surface;
 
-cmp_loc          : array[1..MaxMissions] of pSDL_Surface;
+    /// text
 
-// sounds
+    str_plout,
+    str_apply,
+    str_randoms,
+    str_onebase,
+    str_starta,
+    str_loss,
+    str_gaddon,
+    str_chat,
+    str_server,
+    str_client,
+    str_goptions,
+    str_waitsv,
+    str_cmpdif,
+    str_repend,
+    str_replay,
+    str_play,
+    str_inv_ml,
+    str_inv_time,
+    str_player_def,
+    str_menu,
+    str_time,
+    str_players,
+    str_map,
+    str_save,
+    str_load,
+    str_delete,
+    str_gsaved,
+    str_pause,
+    str_win,
+    str_lose,
+    str_sver,
+    str_sfull,
+    str_sgst,
+    str_team,
+    str_srace,
+    str_ready,
+    str_udpport,
+    str_connecting,
+    str_pnu,
+    str_npnu,
+    str_gmodet,
+    str_sound,
+    str_soundvol,
+    str_musicvol,
+    str_game,
+    str_maction,
+    str_scrollspd,
+    str_mousescrl,
+    str_fullscreen,
+    str_plname,
+    str_mrandom,
+    str_m_liq,
+    str_m_siz,
+    str_m_obs,
+    str_MObjectives,
+    str_MMap,
+    str_MPlayers
+                 : string;
 
- snd_svolume     : byte = 64;
- snd_mvolume     : byte = 64;
+    str_npnua,
+    str_pnua,
+    str_cmpd     : array[0..4] of string;
 
- snd_gv          : pMIX_CHUNK = NIL;
- snd_explode     : pMIX_CHUNK = NIL;
- snd_bfgs        : pMIX_CHUNK = NIL;
- snd_bfgepx      : pMIX_CHUNK = NIL;
- snd_plasmas     : pMIX_CHUNK = NIL;
- snd_plasmaexp   : pMIX_CHUNK = NIL;
- snd_hshoot      : pMIX_CHUNK = NIL;
- snd_hmelee      : pMIX_CHUNK = NIL;
- snd_build       : pMIX_CHUNK = NIL;
- snd_demon1      : pMIX_CHUNK = NIL;
- snd_dpain       : pMIX_CHUNK = NIL;
- snd_losts       : pMIX_CHUNK = NIL;
- snd_impd        : pMIX_CHUNK = NIL;
- snd_impc        : pMIX_CHUNK = NIL;
- snd_demonc      : pMIX_CHUNK = NIL;
- snd_demona      : pMIX_CHUNK = NIL;
- snd_demond      : pMIX_CHUNK = NIL;
- snd_cacoc       : pMIX_CHUNK = NIL;
- snd_cacod       : pMIX_CHUNK = NIL;
- snd_baronc      : pMIX_CHUNK = NIL;
- snd_barond      : pMIX_CHUNK = NIL;
- snd_cyberc      : pMIX_CHUNK = NIL;
- snd_cyberd      : pMIX_CHUNK = NIL;
- snd_cyberf      : pMIX_CHUNK = NIL;
- snd_mindc       : pMIX_CHUNK = NIL;
- snd_mindd       : pMIX_CHUNK = NIL;
- snd_mindf       : pMIX_CHUNK = NIL;
- snd_zc          : pMIX_CHUNK = NIL;
- snd_zd          : pMIX_CHUNK = NIL;
- snd_zp          : pMIX_CHUNK = NIL;
- snd_explode2    : pMIX_CHUNK = NIL;
- snd_ud1         : pMIX_CHUNK = NIL;
- snd_ud2         : pMIX_CHUNK = NIL;
- snd_pistol      : pMIX_CHUNK = NIL;
- snd_cast        : pMIX_CHUNK = NIL;
- snd_shotgun     : pMIX_CHUNK = NIL;
- snd_launch      : pMIX_CHUNK = NIL;
- snd_radar       : pMIX_CHUNK = NIL;
- snd_teleport    : pMIX_CHUNK = NIL;
- snd_uac_u0      : pMIX_CHUNK = NIL;
- snd_uac_u1      : pMIX_CHUNK = NIL;
- snd_uac_u2      : pMIX_CHUNK = NIL;
- snd_alarm       : pMIX_CHUNK = NIL;
- snd_rico        : pMIX_CHUNK = NIL;
- snd_chat        : pMIX_CHUNK = NIL;
- snd_hell        : pMIX_CHUNK = NIL;
- snd_al          : pMIX_CHUNK = NIL;
- snd_click       : pMIX_CHUNK = NIL;
- snd_hellbar     : pMIX_CHUNK = NIL;
- snd_imp         : pMIX_CHUNK = NIL;
- snd_zomb        : pMIX_CHUNK = NIL;
- snd_cast2       : pMIX_CHUNK = NIL;
- snd_inapc       : pMIX_CHUNK = NIL;
+    str_hint_t   : array[0..2] of string;
+    str_hint_m   : array[0..2] of string;
+    str_hint     : array[0..2,1..2,0..26] of string;
 
- snd_ml          : array of pMIX_MUSIC;
- snd_mls         : integer = 0;
- snd_curm        : byte = 1;
+    str_losst    : array[0..2] of string;
+    str_startat  : array[0..3] of string;
 
-// sprites
+    str_rpl : array[0..5] of string = ('OFF','REC','REC','PLAY','PLAY','END');
 
- spr_mouse_in,
- spr_b_rfast,
- spr_b_rskip,
- spr_toxin,
- spr_hg_eff,
- spr_cancle,
- spr_panel,
- spr_cursor,
- spr_m_back,
- spr_m_sl,
- spr_c_mars,
- spr_c_hell,
- spr_c_earth,
- spr_c_phobos,
- spr_c_deimos    : pSDL_Surface;
+    str_race     : array[0..2] of string;
 
- spr_sport       : array[0..1] of TUSprite;
+    str_gmode    : array[0..4] of string;
 
- spr_u_base      : array[0..5] of TUSprite;
+    str_svld_errors: array[1..4] of string;
 
- spr_build       : array[0..3] of TUSprite;
+    str_camp_t   : array[0..MaxMissions] of string;
+    str_camp_o   : array[0..MaxMissions] of string;
+    str_camp_m   : array[0..MaxMissions] of string;
 
- spr_b_b         : array[1..2,0..5] of pSDL_Surface;
- spr_b_u         : array[1..2,0..7] of pSDL_Surface;
- spr_b_up        : array[1..2,0..7] of pSDL_Surface;
+    str_addon    : array[false..true] of string;
 
- spr_mp          : array[1..2] of pSDL_Surface;
+    str_connect,
+    str_svup,
+    str_lng,
+    str_maction2,
+    str_exit,
+    str_reset    : array[false..true] of string;
 
- spr_ut          : array[0..15]of TUSprite;
+    str_menu_s1,
+    str_menu_s2  : array[0..2] of string;
 
- spr_bex1        : array[0..5] of TUSprite;
- spr_bex2        : array[0..8] of TUSprite;
+    str_m_liqC   : array[0..4] of string = ('-','R1','R2','R3','R4');
 
- spr_explode     : array[0..2] of TUSprite;
- spr_teleport    : array[0..5] of TUSprite;
- spr_bfg         : array[0..3] of TUSprite;
+    // sounds
 
- spr_h_p0        : array[0..3] of TUSprite;
- spr_h_p1        : array[0..3] of TUSprite;
- spr_h_p2        : array[0..3] of TUSprite;
- spr_h_p3        : array[0..7] of TUSprite;
+     snd_svolume     : byte = 64;
+     snd_mvolume     : byte = 64;
+     snd_ml          : array of pMIX_MUSIC;
+     snd_mls         : integer = 0;
+     snd_curm        : byte = 1;
 
- spr_decs        : array[0..10] of TUSprite;
+     snd_build       : array[1..2] of pMIX_CHUNK;
 
- spr_b           : array[1..2,0..5,0..3] of TUSprite;
+     snd_l_cy_f,
+     snd_l_cy_a,
+     snd_alarm,
+     snd_l_cy_p,
+     snd_l_cy_c,
+     snd_l_cy_d,
+     snd_l_cy_a1,
+     snd_l_cy_a2,
+     snd_l_dron_p,
+     snd_l_dron_a,
+     snd_l_octo_a,
+     snd_l_octo_c,
+     snd_l_octo_d,
+     snd_l_octo_p,
+     snd_l_spawn,
+     snd_uupgr,
+     snd_hupgr,
+     snd_cast,
+     snd_cast2,
+     snd_bfgs,
+     snd_bfgepx,
+     snd_plasmas,
+     snd_ssg,
+     snd_rico,
+     snd_pistol,
+     snd_shotgun,
+     snd_launch,
+     snd_cubes,
+     snd_rev_c,
+     snd_rev_m,
+     snd_rev_d,
+     snd_rev_a,
+     snd_rev_ac,
+     snd_hshoot,
+     snd_man_a,
+     snd_man_d,
+     snd_man_p,
+     snd_man_c,
+     snd_zomb,
+     snd_ud1,
+     snd_ud2,
+     snd_z_p,
+     snd_z_d1,
+     snd_z_d2,
+     snd_z_d3,
+     snd_z_s1,
+     snd_z_s2,
+     snd_z_s3,
+     snd_uac_u0,
+     snd_uac_u1,
+     snd_uac_u2,
+     snd_pain_c,
+     snd_pain_p,
+     snd_pain_d,
+     snd_mindc,
+     snd_mindd,
+     snd_mindf,
+     snd_cyberc,
+     snd_cyberd,
+     snd_cyberf,
+     snd_knight,
+     snd_knightd,
+     snd_baronc,
+     snd_barond,
+     snd_cacoc,
+     snd_cacod,
+     snd_dpain,
+     snd_demon1,
+     snd_click,
+     snd_chat,
+     snd_inapc,
+     snd_ccup,
+     snd_radar,
+     snd_teleport,
+     snd_pexp,
+     snd_exp,
+     snd_exp2,
+     snd_d0,
+     snd_meat,
+     snd_ar_act,
+     snd_ar_c,
+     snd_ar_d,
+     snd_ar_f,
+     snd_imp,
+     snd_impd1,
+     snd_impd2,
+     snd_impc1,
+     snd_impc2,
+     snd_demonc,
+     snd_demona,
+     snd_demond,
+     snd_hmelee,
+     snd_arch_a,
+     snd_arch_at,
+     snd_arch_d,
+     snd_arch_p,
+     snd_arch_c,
+     snd_arch_f,
+     snd_hellbar,
+     snd_hell
 
- spr_u_p0        : array[0..5] of TUSprite;
- spr_u_p1        : array[0..3] of TUSprite;
- spr_u_p2        : array[0..5] of TUSprite;
-
- spr_h_u0        : array[0..28] of TUSprite;
- spr_h_u1        : array[0..52] of TUSprite;
- spr_h_u2        : array[0..53] of TUSprite;
- spr_h_u3        : array[0..29] of TUSprite;
- spr_h_u4        : array[0..52] of TUSprite;
- spr_h_u5        : array[0..56] of TUSprite;
- spr_h_u6        : array[0..81] of TUSprite;
-
- spr_h_z0        : array[0..52] of TUSprite;
- spr_h_z1        : array[0..52] of TUSprite;
- spr_h_z2        : array[0..59] of TUSprite; //h_z2_
- spr_h_z3        : array[0..52] of TUSprite; //h_z3_
- spr_h_z4j       : array[0..15] of TUSprite; //h_z4j_
- spr_h_z5        : array[0..52] of TUSprite; //h_z5_
-
- spr_u_u0        : array[0..52] of TUSprite;
- spr_u_u1        : array[0..44] of TUSprite;
- spr_u_u2        : array[0..44] of TUSprite;
- spr_u_u3        : array[0..52] of TUSprite;
- spr_u_u4        : array[0..44] of TUSprite;
- spr_u_u5        : array[0..15] of TUSprite;
- spr_u_u6        : array[0..44] of TUSprite;
- spr_u_u7        : array[0..15] of TUSprite;
-
- spr_vgvn        : array[0..7] of TUSprite;
-
- spr_liquid      : array[1..LiquidAnim] of TUSprite;
-
- spr_hbarrak,
- spr_dum,
- spr_mine,
- spr_u_portal,
- spr_h_altar,
- spr_h_fortes,
- spr_db_h0,
- spr_db_h1,
- spr_db_u0,
- spr_db_u1       :  TUSprite;
-
- spr_adecs       : array[1..MaxADecSpr] of TUSprite;
- spr_blood       : array[0..2] of TUSprite;
-
-
-
-
-
-
-
-
-
-
+     : pMIX_CHUNK;
 
 
 
