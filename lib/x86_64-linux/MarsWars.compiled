@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="/usr/bin/fpc" Date="1454174389"/>
+  <Params Value=" -Mfpc -CX -Cg -O1 -g -gl -gv -Xg -XX -l -vewnhibq -Fi/media/t3ds/7CEAB1D2EAB188C2/t3ds/MarsWars/MarsWarsv39/lib/x86_64-linux -Fu/media/t3ds/7CEAB1D2EAB188C2/t3ds/MarsWars/MarsWarsv39/ -FU/media/t3ds/7CEAB1D2EAB188C2/t3ds/MarsWars/MarsWarsv39/lib/x86_64-linux/ MarsWars.lpr"/>
+</CONFIG>
