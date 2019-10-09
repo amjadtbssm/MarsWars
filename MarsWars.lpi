@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="10"/>
+    <Version Value="9"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
@@ -11,7 +11,7 @@
       </Flags>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="MarsWars"/>
+      <Title Value="MarsWars_ded"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
       <Icon Value="0"/>
@@ -29,7 +29,7 @@
           <Version Value="11"/>
           <PathDelim Value="\"/>
           <Target>
-            <Filename Value="MarsWars"/>
+            <Filename Value="MarsWars_ded"/>
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir)"/>
@@ -65,13 +65,14 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="k@k"/>
+        <CommandLineParams Value="d"/>
       </local>
     </RunParams>
     <Units Count="1">
       <Unit0>
         <Filename Value="MarsWars.lpr"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="MarsWars_ded"/>
       </Unit0>
     </Units>
   </ProjectOptions>
@@ -87,6 +88,7 @@
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
+        <SyntaxMode Value="fpc"/>
         <CStyleOperator Value="False"/>
         <AllowLabel Value="False"/>
         <CPPInline Value="False"/>

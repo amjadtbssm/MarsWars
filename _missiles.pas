@@ -1,6 +1,3 @@
-
-
-
 procedure _missile_add(mx,my,mvx,mvy,tr:integer;msid,pl,mft:byte);
 var m:integer;
     tu:PTUnit;
@@ -54,12 +51,12 @@ mid_imp      : begin dam:=15; sr :=0; end;
 mid_caco     : begin dam:=30; sr :=0; end;
 mid_baron    : begin dam:=50; sr :=0; end;
 mid_granade  : begin dam:=70; inc(vst,vst div 3); sr :=granade_sp;end;
-mid_rocket   : begin dam:=100;sr :=rocket_sp; dir:=((p_dir(vx,vy,x,y)+23) mod 360) div 45; dec(vst,vst div 3); if(vst<1)then vst:=1;  end;
+mid_rocket   : begin dam:=100;sr :=rocket_sp; dir:=((p_dir(vx,vy,x,y)+23) mod 360) div 45; dec(vst,vst div 3); if(vst<1)then vst:=1;  end;  
 mid_mexplode : begin dam:=200;sr :=100; vst:=1; end;
 mid_bullet,
 mid_toxbullet: begin dam:=6;  sr :=0; vst:=1; end;
 mid_Mbullet  : begin dam:=15; sr :=0; vst:=1; end;
-mid_Sbullet  : begin sr :=dist2(x,y,vx,vy) div 4;dam:=4 +((69-sr) div 3); vst:=1; end; //7-27  60    20+
+mid_Sbullet  : begin sr :=dist2(x,y,vx,vy) div 4;dam:=4 +((69-sr) div 3); vst:=1; end; //7-27  60    20+   
 mid_plasma   : begin dam:=18; sr :=0; vst:=vst div 2; if(vst<1)then vst:=1; end;
 mid_bfg      : begin dam:=100;sr :=150;end;
         else
@@ -80,7 +77,7 @@ mid_bfg      : begin dam:=100;sr :=150;end;
  mid_toxbullet: inc(dam,2);
  mid_Sbullet  : inc(dam,2);
  mid_plasma   : inc(dam,3);
- mid_bfg      : inc(dam,15);
+ mid_bfg      : inc(dam,15); 
            else
            end;
 
@@ -108,11 +105,10 @@ begin
                  );
 end;
 
-function _missle_damage(m:integer):boolean;
+procedure _missle_damage(m:integer);
 var damd,d,p:integer;
        tu:PTUnit;
 begin
-   _missle_damage:=false;
    with _missiles[m] do
    begin
       tu:=@_units[tar];
@@ -160,23 +156,12 @@ begin
                  then inc(tu^.paint,vid_fps)
                  else tu^.paint:=tox_timem;
 
-              if(mid=mid_Sbullet)then
-              begin
-                 if(tu^.bio)
-                 then _effect_add(tu^.vx,tu^.vy-5,tu^.vy+tu^.uf*map_mw+1,eid_blood)
-                 else
-                   begin
-                     _effect_add(tu^.vx,tu^.vy-5,tu^.vy+tu^.uf*map_mw+1,mid_Sbullet);
-                   end;
-              end;
-
-              _missle_damage:=(tu^.bio)and(mid in bullets); //blood effect
-
+              if(tu^.isbuild)and(mid=mid_Sbullet)then inc(damd,2);
 
               _unit_damage(tar,damd,p);
            end
            else          // splash
-             if(sr>0)and(d<sr)and((tu^.isbuild=false)or(mid=mid_Sbullet)) then
+             if(sr>0)and(d<sr)and((tu^.isbuild=false)or(mid=mid_Sbullet)) then 
              begin
                 if(mid in _midrockets)then
                 begin
@@ -188,16 +173,12 @@ begin
                 begin
                    if(tu^.ucl in marines)then damd:=damd shr 1;
                    if(tu^.shield>0)then dec(damd,damd div 3);
-                   _effect_add(tu^.vx,tu^.vy,tu^.vy+tu^.uf*map_mw+1,eid_bfgef);
                 end;
 
                 if(mid=mid_Sbullet)then
                 begin
-                   if(tu^.bio)
-                   then _effect_add(tu^.vx,tu^.vy-5,tu^.vy+tu^.uf*map_mw+1,eid_blood)
-                   else _effect_add(tu^.vx,tu^.vy-5,tu^.vy+tu^.uf*map_mw+1,mid_Sbullet);
-
-                   if(tu^.ucl<>UID_Mine)then _unit_damage(tar,damd,p);
+                   if(tu^.ucl<>UID_Mine)then  
+                   _unit_damage(tar,damd,p)
                 end
                 else _unit_damage(tar,trunc(damd*(1-(d/sr)) ),p);
              end;
@@ -206,9 +187,7 @@ begin
 end;
 
 procedure _missile_cycle;
-var m,u,d:integer;
-  spr:PTUSprite;
-  bld:boolean;
+var m,u:integer;
 begin
    for m:=1 to MaxMissiles do
     with _missiles[m] do
@@ -221,84 +200,19 @@ begin
         fx:=vx div fog_cw;
         fy:=vy div fog_cw;
 
-        bld:=false;
-
         if(vst=0)then
          if(dam>0)then
           if(tar>0)
-          then bld:=_missle_damage(m)
+          then _missle_damage(m)
           else
             for u:=1 to MaxUnits do
             begin
                tar:=u;
-               bld:=_missle_damage(m);
+               _missle_damage(m);
             end;
-
-        if(mid<>mid_mexplode)then
-         if (fog_c[fx,fy]>0)then // fog of war
-         begin
-
-            case mid of
-         mid_imp      : spr:=@spr_h_p0[0];
-         mid_caco     : spr:=@spr_h_p1[0];
-         mid_baron    : spr:=@spr_h_p2[0];
-         mid_rocket   : spr:=@spr_h_p3[dir];
-         mid_granade  : spr:=@spr_h_p3[6];
-         mid_plasma   : spr:=@spr_u_p0[0];
-         mid_bfg      : spr:=@spr_u_p2[0];
-            else
-             spr:=@spr_dum;
-            end;
-
-            if ((vid_vx+vid_panel-spr^.hw)<vx)and(vx<(vid_vx+vid_mw+spr^.hw))and
-               ((vid_vy          -spr^.hh)<vy)and(vy<(vid_vy+vid_mh+spr^.hh)) then
-            begin
-               d:=(mf*map_mw)+vy;
-               _sprb_add(spr^.surf,vx-spr^.hw,vy-spr^.hh,d,0,0,0,#0,255,false,0,0,0);
-
-               if(mid in _midrockets)then
-               begin
-                  if(vst mod 2)=0 then _effect_add(vx,vy,d-1,mid_Sbullet);
-                  if(mid=mid_granade)then dec(vy,vst div 3);
-               end;
-
-               if(vst=0)then
-               begin
-                  case mid of
-               mid_imp,
-               mid_caco,
-               mid_baron,
-               mid_plasma     : PlaySND(snd_plasmaexp,0);
-               mid_rocket,
-               mid_granade    : PlaySND(snd_explode,0);
-               mid_bfg        : PlaySND(snd_bfgepx,0);
-               mid_Sbullet,
-               mid_bullet,
-               mid_Mbullet,
-               mid_toxbullet  : if(random(5)=0)then PlaySND(snd_rico,0);
-                  end;
-
-                 if(bld)
-                 then _effect_add(vx,vy-5,d+1,eid_blood)
-                 else
-                   case mid of
-             mid_Sbullet : //if(sr>20)then
-                            if(mf=uf_ground)
-                            then for u:=1 to 4 do _effect_add(vx-sr+random(sr*2),vy-sr+random(sr*2),d+40,mid_Sbullet)
-                            else continue;
-                   else
-                     _effect_add(vx,vy,d+40,mid);
-                   end;
-              end;
-           end;
-        end;
 
      end;
 end;
-
-
-
-
 
 
 

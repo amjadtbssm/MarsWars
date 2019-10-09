@@ -21,7 +21,7 @@ begin
       invuln  := false;
       apcs    := 1;
       apcm    := 0;
-      bio     := true;
+      bio     := true; 
 
       ////////////// CAMPAINGS
 
@@ -68,21 +68,6 @@ begin
          invuln := true;
       end;
 
-      if(ucl=UID_InvBase) then
-      begin
-         mhits  := 32000;
-         uf     := uf_ground;
-         speed  := 0;
-         sr     := 0;
-         utp    := ut_0;
-         r      := 0;
-         generg := 1;
-         isbuild:= true;
-         shadow := false;
-         solid  := false;
-         invuln := true;
-      end;
-
       if(ucl in [UID_UACPortal,UID_UACSPort]) then
       begin
          mhits  := 5000;
@@ -111,13 +96,13 @@ begin
          sr     := base_r;
          utp    := ut_0;
          r      := 90;
-         generg := 2;
+         generg := 1;
          isbuild:= true;
          shadow := false;
       end;
       if(ucl=UID_UACBase2) then
       begin
-         mhits  := 1500;
+         mhits  := 1000;
          uf     := uf_ground;
          speed  := 0;
          sr     := 250;
@@ -390,7 +375,7 @@ begin
          r      := 12;
          uf     := uf_ground;
          speed  := 12;
-         sr := 265;
+         sr     := 265;
          utp    := ut_0;
          if(ucl=UID_ZFormer)then
          begin
@@ -489,7 +474,7 @@ begin
             utp    := ut_7;
             sr     := 250;
          end;
-      end;
+      end; 
 
       if(ucl=UID_Mine) then
       begin
@@ -497,7 +482,7 @@ begin
          r      := 5;
          uf     := uf_ground;
          speed  := 0;
-         sr     := 100;
+         sr     := 35;
          utp    := ut_6;
          isbuild:= true;
          invis  := 2;
@@ -515,20 +500,16 @@ begin
          utp    := ut_7;
          apcm   := 10;
          bio    := false;
-      end;
+      end;  
 
       if(isbuild)then
       begin
          mmr:=trunc(r*map_mmcx);
          if(utp=ut_1)then inc(my,b_r[utp]);
-         bio    := false;
+         bio    := false;  
       end;
       pains:=painc;
-      fr:=(sr+fog_cw) div fog_cw;
-      if(fr>MFogM)then fr:=MFogM;
-      if(onlySVCode)then hits:=mhits
-
-     // hits:=hits div 2;
+      hits:=mhits;
    end;
 end;
 
